@@ -21,6 +21,28 @@ It combines an evidence-linked Intent Causal Record, deterministic intent-based 
 
 The complete deterministic demonstration runs without an account, external service, real secret, or OpenAI API key.
 
+### One-command local launch
+
+Windows PowerShell:
+
+```powershell
+git clone https://github.com/kenhuangus/causal-gate.git
+Set-Location causal-gate
+powershell -ExecutionPolicy Bypass -File .\scripts\local\run-windows.ps1
+```
+
+macOS or Linux:
+
+```bash
+git clone https://github.com/kenhuangus/causal-gate.git
+cd causal-gate
+./scripts/local/run-macos-linux.sh
+```
+
+The launchers generate CausalGate's local signing secrets in a git-ignored file, build the container, wait for health, and open `http://localhost:8080`. They do not request or store an OpenAI key.
+
+### Manual Docker launch
+
 ```bash
 git clone https://github.com/kenhuangus/causal-gate.git
 cd causal-gate
@@ -43,6 +65,8 @@ docker compose down
 ```
 
 The demo uses a synthetic canary and simulated tools. It performs no external retrieval or outbound action.
+
+For Windows, macOS, Linux, Google Cloud Run, and AWS App Runner instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Why this project exists
 

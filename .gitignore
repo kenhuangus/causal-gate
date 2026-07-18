@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+.causalgate.local.env
 .venv/
 __pycache__/
 *.py[cod]
@@ -8,6 +9,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+dist/
 apps/web/node_modules/
 apps/web/dist/
 *.tsbuildinfo
