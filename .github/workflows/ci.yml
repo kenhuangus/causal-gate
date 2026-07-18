@@ -11,6 +11,9 @@ jobs:
         with: {node-version: 22, cache: npm, cache-dependency-path: apps/web/package-lock.json}
       - run: uv lock --check
       - run: uv run --isolated --extra dev pytest
+      - run: uv build
+      - run: uv venv .wheel-test && uv pip install --python .wheel-test/bin/python dist/*.whl
+      - run: .wheel-test/bin/python -c "from causalgate import AgentsSDKTraceAdapter, ApiTraceSink, Recorder, start_execution, trace_tool"
       - run: uv run --isolated causalgate verify-demo
       - run: uv run --isolated causalgate benchmark
       - run: KEY=$(openssl rand -hex 32); CAUSALGATE_ATTESTATION_KEY="$KEY" uv run --isolated causalgate assurance-suite

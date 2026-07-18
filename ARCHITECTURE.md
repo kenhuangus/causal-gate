@@ -109,7 +109,7 @@ The preferred judge path is a hosted read-only demo with a reset button and prel
 
 ## 13. Developer-experience architecture
 
-The SDK surface is separated from storage and analysis through a `TraceSink` protocol. The default sink batches events to the local API; an in-memory sink supports tests, and a JSON-lines sink supports zero-service evaluation. Tool instrumentation uses decorators and context managers but also accepts explicit event calls. This design lets developers adopt capture first and add policy enforcement later.
+The SDK surface is separated from storage and analysis through a `TraceSink` protocol. The default recorder is process-local and performs no network I/O. `InMemoryTraceSink` supports tests, `JsonlTraceSink` supports redacted zero-service evaluation, and the explicitly configured `ApiTraceSink` buffers events for the authenticated private API. Tool instrumentation uses sync/async decorators and context managers and also accepts explicit event calls. Developers can adopt capture first and add policy enforcement or durable export later.
 
 Integration diagnostics run before the first execution and report recorder reachability, schema compatibility, redaction configuration, and model-analysis availability. A failed analyzer never blocks trace capture. A failed recorder can be configured as fail-open for development or fail-closed for protected workflows. Defaults are explicit in the quickstart.
 
@@ -117,7 +117,7 @@ The product reveals complexity progressively. The run screen opens with the orig
 
 ## 14. Platform extension boundary
 
-Adapters translate framework events into the stable recorder schema. Detector plugins consume a read-only execution graph and emit validated findings. Policy plugins receive a typed tool proposal, intent contract, and trace context and return a typed decision. Export plugins receive a redacted evidence package. The release implements the manual SDK plus OpenAI Agents SDK and LangGraph adapters, with public contract tests and adapter examples.
+Adapters translate framework events into the stable recorder schema. Detector plugins consume a read-only execution graph and emit validated findings. Policy plugins receive a typed tool proposal, intent contract, and trace context and return a typed decision. Export sinks receive redacted evidence. The release implements the manual SDK, an OpenAI Agents SDK `TracingProcessor`, and sync/async LangGraph node wrappers, with public contract tests and runnable examples.
 
 ## 15. Model-access modes
 

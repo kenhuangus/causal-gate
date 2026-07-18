@@ -331,7 +331,9 @@ def create_app(
             raise HTTPException(503, "authenticated suite attestation is not configured")
         return run_synthetic_assurance_suite(key)
 
-    web = Path(__file__).parents[2] / "apps" / "web" / "dist"
+    web = Path(os.getenv("CAUSALGATE_WEB_DIR", "apps/web/dist")).resolve()
+    if not web.exists():
+        web = Path(__file__).parents[2] / "apps" / "web" / "dist"
     if web.exists():
         app.mount("/assets", StaticFiles(directory=web / "assets"), name="assets")
 

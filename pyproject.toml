@@ -3,6 +3,17 @@ name = "causal-gate"
 version = "0.1.0"
 description = "Deterministic intent control, causal assurance, and release gating for AI agents"
 requires-python = ">=3.11"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "DistributedApps.AI"}]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Typing :: Typed",
+]
 dependencies = [
   "fastapi>=0.115,<1",
   "uvicorn[standard]>=0.34,<1",
@@ -13,6 +24,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["httpx>=0.28,<1", "pytest>=8,<9", "pytest-cov>=6,<7"]
+langgraph = ["langgraph>=1.2,<2"]
+
+[project.urls]
+Homepage = "https://github.com/kenhuangus/causal-gate"
+Documentation = "https://github.com/kenhuangus/causal-gate/blob/main/docs/SDK.md"
+Repository = "https://github.com/kenhuangus/causal-gate"
+Issues = "https://github.com/kenhuangus/causal-gate/issues"
 
 [project.scripts]
 causalgate = "causalgate.cli:main"

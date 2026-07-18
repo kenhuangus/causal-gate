@@ -29,6 +29,8 @@ class EventType(StrEnum):
     STATE_MUTATION = "state_mutation"
     FINAL_ANSWER = "final_answer"
     ERROR = "error"
+    SPAN_START = "span_start"
+    SPAN_END = "span_end"
 
 
 class IntentContract(StrictModel):

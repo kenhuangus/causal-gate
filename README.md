@@ -68,6 +68,29 @@ The demo uses a synthetic canary and simulated tools. It performs no external re
 
 For Windows, macOS, Linux, Google Cloud Run, and AWS App Runner instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
+## Python SDK quickstart
+
+The repository ships an alpha Python SDK for local capture, intent enforcement, redacted JSON-lines export, private API export, OpenAI Agents SDK tracing, and LangGraph node instrumentation. Until the first PyPI release, install it from a checkout:
+
+```bash
+pip install .
+python examples/basic_sdk.py
+```
+
+```python
+from causalgate import IntentContract, start_execution, trace_tool
+
+@trace_tool("lookup")
+async def lookup(*, query: str):
+    return {"answer": query}
+
+intent = IntentContract(goal="Research public data.", allowed_tools=["lookup"])
+with start_execution(intent) as recorder:
+    result = recorder.finish_execution("complete")
+```
+
+The default SDK performs no network or model call. See [the complete SDK guide](docs/SDK.md) for sinks, fail-open/fail-closed behavior, async instrumentation, and framework integration examples.
+
 ## Why this project exists
 
 Agent observability platforms are excellent at collecting spans, prompts, latency, token usage, tool calls, and model outputs. Those traces answer:

@@ -11,7 +11,8 @@ SHELL_SCRIPTS = sorted((ROOT / "scripts").glob("**/*.sh"))
 def test_all_shell_deployment_scripts_parse():
     assert SHELL_SCRIPTS
     for script in SHELL_SCRIPTS:
-        subprocess.run(["bash", "-n", str(script)], check=True)
+        source = script.read_text().replace("\r\n", "\n").encode()
+        subprocess.run(["bash", "-n"], input=source, check=True)
 
 
 def test_local_launchers_enable_explicit_byok_without_storing_an_openai_key():

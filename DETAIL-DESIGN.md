@@ -38,9 +38,9 @@ The divergence frontier is deterministic for a fixed graph and verifier version.
 
 ## 3. SDK interface
 
-The SDK exposes `start_execution(intent, policy_mode)`, `span(name, attributes)`, `record_retrieval(document)`, `propose_tool(name, arguments)`, `record_policy_decision(decision)`, `record_tool_result(result)`, `record_state_change(before, after)`, and `finish_execution(output, status)`. A `@trace_tool` decorator records proposals, decisions, results, timing, and exceptions. Context variables propagate execution and parent identifiers across asynchronous calls.
+The SDK exposes `start_execution(intent, policy_mode)`, `span(name, attributes)`, `record_retrieval(document)`, `propose_tool(name, arguments)`, `record_tool_result(result)`, `record_state_change(before, after)`, and `finish_execution(output)`. The `@trace_tool` decorator records proposals, results, and exception types for synchronous and asynchronous tools. Context variables propagate the active execution across asynchronous calls; event parent identifiers remain explicit.
 
-The quickstart target is three conceptual operations: configure a sink, start an execution around the existing agent call, and decorate or wrap tools. The SDK emits a local trace URL at completion. Configuration validation returns actionable field-level errors. Batching, retry, and shutdown behavior are deterministic, and an explicit `flush()` is available for command-line applications.
+The quickstart is three operations: optionally configure a sink, start an execution around the existing agent call, and decorate or wrap tools. The process-local default has no external dependency. API export validates configuration, batches events, retries bounded transport failures, and supports explicit `flush()` and `close()`. Sink errors are fail-open by default and observable through `recorder.sink_errors`; protected workflows can select fail-closed behavior.
 
 ## 4. Intent contract generation
 

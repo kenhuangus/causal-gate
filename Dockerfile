@@ -7,7 +7,7 @@ RUN npm ci && npm run build
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 CAUSALGATE_DB=/data/causalgate.db CAUSALGATE_DEMO_MODE=true
 WORKDIR /app
-COPY pyproject.toml README.md requirements.lock ./
+COPY pyproject.toml README.md LICENSE requirements.lock ./
 COPY src ./src
 COPY main.py ./
 COPY artifacts ./artifacts

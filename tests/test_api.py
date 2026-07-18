@@ -1,7 +1,9 @@
 import sqlite3
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+import causalgate.api as api_module
 from causalgate.api import create_app
 from causalgate.storage import TraceStore
 from causalgate.demo import FIXTURE
@@ -35,6 +37,23 @@ def test_health_and_demo_journey():
     ontology = c.get("/api/v1/authorization/ontology").json()
     assert ontology["version"] == "causalgate-ontology/1.0"
     assert ontology["digest"].startswith("sha256:")
+
+
+def test_web_ui_is_served_when_package_is_installed_outside_project(monkeypatch, tmp_path):
+    web = tmp_path / "apps" / "web" / "dist"
+    (web / "assets").mkdir(parents=True)
+    (web / "index.html").write_text("<main>CausalGate UI</main>", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        api_module,
+        "__file__",
+        str(Path("/usr/local/lib/python3.12/site-packages/causalgate/api.py")),
+    )
+
+    response = client().get("/")
+
+    assert response.status_code == 200
+    assert "CausalGate UI" in response.text
 
 
 def test_missing_execution_is_404():
