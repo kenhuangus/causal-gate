@@ -1,0 +1,37 @@
+# Codex build log
+
+## 2026-07-17 — production-oriented deterministic release
+
+Request: implement, test, debug, and prepare AgentFlight Recorder for a production-oriented judge path while reserving the runtime API key exclusively for product runtime use.
+
+Decisions: implemented one real baseline/protected workflow shared by SDK, API, CLI, browser, report, and tests; kept the core release keyless; represented framework integrations through stable callback adapters; used FastAPI plus React/TypeScript; used SQLite for the local profile and supplied a Cloud Run build path. Applied the Agents SDK guidance by keeping one explicit workflow, narrow deterministic tools, `/health`, runtime `PORT`, and behavior-oriented tests. Added an opt-in server-only Responses API analyzer and recorded-artifact generator behind explicit runtime gates. After runtime credentials were funded, one authorized GPT-5.6 product-path call generated the checked-in, redacted recorded artifact; deterministic verification remains keyless and makes no live call.
+
+Files changed: all implementation, web, test, container, CI, Google Cloud, README, license, and verification files added in this session. Governing product documents were preserved.
+
+Security invariants: synthetic-only public demo; no external side effect; strict schemas and byte-bounded payloads; separate redacted representation; valid same-run parent and evidence identifiers; append/seal/idempotency enforcement; protected replay deny-by-default; anonymous general trace APIs disabled; streamed request cap and demo quota; `.env` ignored; runtime secret neither read nor exposed.
+
+Verification requested: unit, integration, adapter, CLI, benchmark, frontend production build, and container smoke testing.
+
+Verification result: 25 Python tests passed, covering API, append/seal/idempotency conflicts, anonymous API denial, request-size enforcement, evidence integrity, all eight detectors, policy precedence, replay, redaction, SDK wrapping, both adapters, live-analysis endpoint gating, minimized projection, structured schema, evidence rejection, sanitized provider failure, no deterministic-state mutation, recorded generation, and required-artifact verification. The CLI judge assertion passed with eight baseline findings and zero protected findings. The `afr-suite-1.1` benchmark executed 32 materially distinct labeled scenario bodies with 32 unique IDs and 32 unique stable hashes, producing 16 true positives, zero false positives, zero false negatives, and deterministic repeated output; these metrics apply only to the included synthetic suite. Missing recorded evidence failed by default and explicit optional mode produced a labeled skip. The runtime generation command failed closed while disabled and made no call. Clean `npm ci`, React/TypeScript production build, Python compilation, and HTTP smoke passed. The cloud browser refused local-loopback navigation by policy, so no browser automation result is claimed. Docker is not installed in the execution environment, so the image could not be built here.
+
+Known limits: the framework adapters expose stable normalization boundaries but are not yet exercised against full external framework agents; the Cloud configuration deploys the intentionally narrow synthetic judge service, while authenticated multi-tenant ingestion, Cloud SQL, and private workers remain a separate production expansion; the benchmark is synthetic and cannot support general production accuracy claims; container verification, a deployed browser matrix, a five-engineer usability pilot, and submission video remain outstanding.
+
+Next task: deploy the immutable image to the team Google Cloud project, run the no-signup browser script against the public URL, and complete the human usability pilot.
+
+## 2026-07-17 — independent release review hardening
+
+Request: independently review the source, artifact, deployment profile, and verification claims; fix reproducible security and release issues without making another live API call.
+
+Changes: SQLite persistence now stores only redacted event representations while request idempotency remains bound to a non-persisted body hash; expanded sensitive-key redaction; serialized append writes to avoid stale sequence validation; applied administrator authorization consistently to every private execution read/report/comparison/live-analysis endpoint; added tamper-evident SHA-256 verification to the recorded GPT artifact; included that artifact and a verified read-only API endpoint in the judge image; declared the direct OpenAI SDK dependency; added a restrictive Docker build context allowlist; and corrected architecture claims to distinguish the shipped synthetic judge from future Cloud SQL/worker topology.
+
+Verification requested: regression tests for durable redaction, idempotency retry, artifact tampering, recorded-artifact API availability, Docker context exclusions, and complete release checks.
+
+Verification result: 29 Python tests passed, including durable SQLite inspection proving common secret spellings do not persist, process-restart redaction, identical idempotency retry, private execution read/report authorization, recorded artifact serving, and tamper rejection. The deterministic CLI demo passed with eight baseline findings and zero protected findings; the 32-case benchmark completed deterministically; and the checked-in GPT-5.6 artifact passed fixture and SHA-256 integrity verification. `uv lock --check`, Python compilation, `npm ci`, and the frontend production build passed. Docker is unavailable in this environment, so the hardened image and public deployed browser flow remain external verification gates.
+
+## 2026-07-17 — independent investigation UI refinement
+
+Request: refine AgentFlight Recorder as a visually independent, professional developer-security submission after release review, without changing backend contracts, security controls, or the anonymous judge path.
+
+Changes: rebuilt the React interface as an evidence-first investigation cockpit with an offline-safe local visual system; added explicit deterministic, live-disabled, and validated-recorded analysis provenance; surfaced the benchmark suite without generalizing its claims; strengthened the baseline-to-protected counterfactual comparison; converted findings, timeline events, intent boundaries, evidence links, control guidance, and Markdown/JSON report exports into a coherent investigation workflow; and added loading, empty, busy, error, timeout, offline, and reset states. Added responsive layouts for a 320px CSS viewport and 200% zoom reflow, keyboard focus and skip navigation, live-region announcements, forced-colors handling, reduced-motion handling, and self-contained system typography with no remote assets.
+
+Verification result: clean `npm ci`; 5 UI contract tests passed; TypeScript and Vite production build passed; `npm audit --audit-level=high` reported zero vulnerabilities; all 29 Python regression tests passed; and `git diff --check` passed. The UI contract suite checks anonymous fixture endpoints, deterministic/recorded/live provenance language, semantic navigation and asynchronous announcements, complete product states, offline asset independence, narrow-view resilience, focus treatment, reduced motion, and forced colors. Automated rendered-browser QA remains an external gate because Playwright is available in this environment but no Chromium executable is installed; no visual-browser result is claimed.

@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+.pytest_cache/
+.coverage
+htmlcov/
+apps/web/node_modules/
+apps/web/dist/
+*.tsbuildinfo
+evals/results/*.json
+!evals/results/.gitignore
