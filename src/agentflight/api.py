@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import secrets
+import threading
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, defaultdict, deque
 from pathlib import Path
 from uuid import uuid4
 
@@ -26,6 +27,21 @@ class CreateExecution(StrictModel):
     policy_mode: PolicyMode = PolicyMode.BASELINE
 
 
+PUBLIC_DEMO_MAX_RECORDS = 64
+PUBLIC_DEMO_TTL_SECONDS = 60 * 60
+
+
+def _apply_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'"
+    )
+    return response
+
+
 def _safe_event(event: Event) -> Event:
     safe = event.model_copy(deep=True)
     safe.payload = redacted_event_payload(event.payload, event.sensitivity)
@@ -39,12 +55,37 @@ def _safe_execution(run: Execution) -> Execution:
     return safe
 
 
-def create_app(store: TraceStore | None = None) -> FastAPI:
+def create_app(
+    store: TraceStore | None = None,
+    *,
+    demo_max_records: int = PUBLIC_DEMO_MAX_RECORDS,
+    demo_ttl_seconds: int = PUBLIC_DEMO_TTL_SECONDS,
+) -> FastAPI:
+    if demo_max_records < 2 or demo_ttl_seconds <= 0:
+        raise ValueError("invalid public demo retention settings")
     app = FastAPI(title="AgentFlight Recorder", version="0.1.0", docs_url="/api/docs")
     app.state.store = store or TraceStore(os.getenv("AGENTFLIGHT_DB", "data/agentflight.db"))
     app.state.demo_mode = os.getenv("AGENTFLIGHT_DEMO_MODE", "true").lower() == "true"
-    app.state.demo_ids = set()
+    app.state.demo_ids = OrderedDict()
+    app.state.demo_lock = threading.RLock()
     app.state.rate = defaultdict(deque)
+
+    def store_public_demos(runs: list[Execution]) -> list[Execution]:
+        now = time.time()
+        with app.state.demo_lock:
+            saved, removed = app.state.store.put_public_demos(
+                runs,
+                max_records=demo_max_records,
+                ttl_seconds=demo_ttl_seconds,
+                now=now,
+            )
+            for execution_id in removed:
+                app.state.demo_ids.pop(execution_id, None)
+            for run in saved:
+                if run.id not in removed:
+                    app.state.demo_ids[run.id] = now + demo_ttl_seconds
+                    app.state.demo_ids.move_to_end(run.id)
+            return saved
 
     def require_admin(request: Request):
         if app.state.demo_mode:
@@ -57,7 +98,13 @@ def create_app(store: TraceStore | None = None) -> FastAPI:
     def require_execution_access(execution_id: str, request: Request):
         """Keep public access fixture-scoped and private access administrator-scoped."""
         if app.state.demo_mode:
-            if execution_id not in app.state.demo_ids:
+            with app.state.demo_lock:
+                expires_at = app.state.demo_ids.get(execution_id)
+                if expires_at is not None and expires_at <= time.time():
+                    app.state.demo_ids.pop(execution_id, None)
+                    app.state.store.delete_public_demo(execution_id)
+                    expires_at = None
+            if expires_at is None:
                 raise HTTPException(404, "execution not found")
             return
         require_admin(request)
@@ -68,7 +115,7 @@ def create_app(store: TraceStore | None = None) -> FastAPI:
         async for chunk in request.stream():
             size += len(chunk)
             if size > 128_000:
-                return PlainTextResponse("request too large", status_code=413)
+                return _apply_security_headers(PlainTextResponse("request too large", status_code=413))
             chunks.append(chunk)
         body = b"".join(chunks)
         request._body = body
@@ -78,15 +125,10 @@ def create_app(store: TraceStore | None = None) -> FastAPI:
             while bucket and bucket[0] < now - 60:
                 bucket.popleft()
             if len(bucket) >= 30:
-                return PlainTextResponse("demo rate limit exceeded", status_code=429)
+                return _apply_security_headers(PlainTextResponse("demo rate limit exceeded", status_code=429))
             bucket.append(now)
         response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'"
-        return response
+        return _apply_security_headers(response)
 
     @app.get("/health")
     def health():
@@ -136,15 +178,14 @@ def create_app(store: TraceStore | None = None) -> FastAPI:
 
     @app.post("/api/v1/demo/reset")
     def reset():
-        baseline = app.state.store.put(run_demo(PolicyMode.BASELINE))
-        protected = app.state.store.put(run_demo(PolicyMode.PROTECTED))
-        app.state.demo_ids.update({baseline.id, protected.id})
+        baseline, protected = store_public_demos(
+            [run_demo(PolicyMode.BASELINE), run_demo(PolicyMode.PROTECTED)]
+        )
         return {"baseline": baseline.id, "protected": protected.id}
 
     @app.post("/api/v1/demo/{mode}", response_model=Execution)
     def demo(mode: PolicyMode):
-        run = app.state.store.put(run_demo(mode))
-        app.state.demo_ids.add(run.id)
+        run = store_public_demos([run_demo(mode)])[0]
         return _safe_execution(run)
 
     @app.get("/api/v1/executions/{execution_id}", response_model=Execution)

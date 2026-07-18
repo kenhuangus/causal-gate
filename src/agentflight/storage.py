@@ -3,6 +3,8 @@ from __future__ import annotations
 import sqlite3
 import hashlib
 import threading
+import time
+from collections import OrderedDict
 from pathlib import Path
 
 from .models import Event, Execution
@@ -32,6 +34,7 @@ class TraceStore:
         self.path = path
         self._memory: dict[str, Execution] = {}
         self._memory_idempotency: dict[tuple[str, str], tuple[str, str]] = {}
+        self._memory_demo_created: OrderedDict[str, float] = OrderedDict()
         self._lock = threading.RLock()
         if path == ":memory:":
             return
@@ -41,6 +44,7 @@ class TraceStore:
             conn.execute("CREATE TABLE IF NOT EXISTS executions (id TEXT PRIMARY KEY, body TEXT NOT NULL)")
             conn.execute("CREATE TABLE IF NOT EXISTS events (execution_id TEXT NOT NULL, sequence INTEGER NOT NULL, event_id TEXT NOT NULL UNIQUE, body TEXT NOT NULL, PRIMARY KEY(execution_id, sequence))")
             conn.execute("CREATE TABLE IF NOT EXISTS idempotency (execution_id TEXT NOT NULL, key TEXT NOT NULL, body_hash TEXT NOT NULL, event_id TEXT NOT NULL, PRIMARY KEY(execution_id, key))")
+            conn.execute("CREATE TABLE IF NOT EXISTS public_demo_executions (id TEXT PRIMARY KEY, created_at REAL NOT NULL)")
 
     def _connect(self):
         return sqlite3.connect(self.path)
@@ -57,6 +61,117 @@ class TraceStore:
             with self._connect() as conn:
                 conn.execute("INSERT INTO executions(id, body) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET body=excluded.body", (safe.id, safe.model_dump_json()))
         return safe
+
+    def put_public_demos(
+        self,
+        runs: list[Execution],
+        *,
+        max_records: int,
+        ttl_seconds: int,
+        now: float | None = None,
+    ) -> tuple[list[Execution], set[str]]:
+        """Persist a public-demo batch and prune its quota in one transaction."""
+        if not runs or max_records < len(runs) or ttl_seconds <= 0:
+            raise ValueError("invalid public demo retention settings")
+        created_at = time.time() if now is None else now
+        cutoff = created_at - ttl_seconds
+        safe_runs = [_safe_execution(run) for run in runs]
+        removed: set[str] = set()
+        with self._lock:
+            if self.path == ":memory:":
+                for safe in safe_runs:
+                    self._cache_execution(safe)
+                    self._memory_demo_created[safe.id] = created_at
+                    self._memory_demo_created.move_to_end(safe.id)
+                removed.update(
+                    execution_id
+                    for execution_id, timestamp in self._memory_demo_created.items()
+                    if timestamp <= cutoff
+                )
+                excess = max(0, len(self._memory_demo_created) - len(removed) - max_records)
+                remaining = [
+                    execution_id
+                    for execution_id in self._memory_demo_created
+                    if execution_id not in removed
+                ]
+                removed.update(remaining[:excess])
+                for execution_id in removed:
+                    self._delete_cached_execution(execution_id)
+                return safe_runs, removed
+
+            with self._connect() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                for safe in safe_runs:
+                    conn.execute(
+                        "INSERT INTO executions(id, body) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
+                        (safe.id, safe.model_dump_json()),
+                    )
+                    conn.execute(
+                        "INSERT INTO public_demo_executions(id, created_at) VALUES (?, ?) "
+                        "ON CONFLICT(id) DO UPDATE SET created_at=excluded.created_at",
+                        (safe.id, created_at),
+                    )
+                expired = {
+                    row[0]
+                    for row in conn.execute(
+                        "SELECT id FROM public_demo_executions WHERE created_at <= ?", (cutoff,)
+                    )
+                }
+                quota = {
+                    row[0]
+                    for row in conn.execute(
+                        "SELECT id FROM public_demo_executions WHERE id NOT IN "
+                        "(SELECT id FROM public_demo_executions ORDER BY created_at DESC, rowid DESC LIMIT ?)",
+                        (max_records,),
+                    )
+                }
+                removed = expired | quota
+                self._delete_public_demo_rows(conn, removed)
+            for safe in safe_runs:
+                if safe.id not in removed:
+                    self._cache_execution(safe)
+            for execution_id in removed:
+                self._delete_cached_execution(execution_id)
+        return safe_runs, removed
+
+    def delete_public_demo(self, execution_id: str) -> None:
+        """Delete an expired public demo from every backing representation."""
+        with self._lock:
+            self._delete_cached_execution(execution_id)
+            if self.path == ":memory:":
+                return
+            with self._connect() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                self._delete_public_demo_rows(conn, {execution_id})
+
+    def _cache_execution(self, safe: Execution) -> None:
+        self._memory[safe.id] = safe
+        self._memory_idempotency = {
+            key: value for key, value in self._memory_idempotency.items() if key[0] != safe.id
+        }
+        for event in safe.events:
+            self._memory_idempotency[(safe.id, event.idempotency_key)] = (
+                hashlib.sha256(event.model_dump_json().encode()).hexdigest(),
+                event.id,
+            )
+
+    def _delete_cached_execution(self, execution_id: str) -> None:
+        self._memory.pop(execution_id, None)
+        self._memory_demo_created.pop(execution_id, None)
+        self._memory_idempotency = {
+            key: value for key, value in self._memory_idempotency.items() if key[0] != execution_id
+        }
+
+    @staticmethod
+    def _delete_public_demo_rows(conn: sqlite3.Connection, execution_ids: set[str]) -> None:
+        if not execution_ids:
+            return
+        placeholders = ",".join("?" for _ in execution_ids)
+        parameters = tuple(execution_ids)
+        conn.execute(f"DELETE FROM idempotency WHERE execution_id IN ({placeholders})", parameters)
+        conn.execute(f"DELETE FROM events WHERE execution_id IN ({placeholders})", parameters)
+        conn.execute(f"DELETE FROM executions WHERE id IN ({placeholders})", parameters)
+        conn.execute(f"DELETE FROM public_demo_executions WHERE id IN ({placeholders})", parameters)
 
     def create(self, run: Execution) -> Execution:
         if run.status != "open" or run.events:
@@ -148,9 +263,11 @@ class TraceStore:
         with self._lock:
             self._memory.clear()
             self._memory_idempotency.clear()
+            self._memory_demo_created.clear()
             if self.path == ":memory:":
                 return
             with self._connect() as conn:
                 conn.execute("DELETE FROM idempotency")
                 conn.execute("DELETE FROM events")
+                conn.execute("DELETE FROM public_demo_executions")
                 conn.execute("DELETE FROM executions")

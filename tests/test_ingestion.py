@@ -69,6 +69,23 @@ def test_stream_body_limit():
     client = TestClient(create_app(TraceStore(":memory:")))
     response = client.post("/api/v1/demo/baseline", content=b"x" * 128_001)
     assert response.status_code == 413
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Content-Security-Policy"] == (
+        "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'"
+    )
+
+
+def test_rate_limit_response_keeps_security_headers():
+    client = TestClient(create_app(TraceStore(":memory:")))
+    for _ in range(30):
+        assert client.post("/api/v1/demo/baseline").status_code == 200
+    response = client.post("/api/v1/demo/baseline")
+    assert response.status_code == 429
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "fonts.googleapis.com" not in response.headers["Content-Security-Policy"]
+    assert "fonts.gstatic.com" not in response.headers["Content-Security-Policy"]
 
 
 def test_client_supplied_redacted_payload_is_not_trusted(monkeypatch):

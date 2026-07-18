@@ -12,7 +12,7 @@ Before changing code, read `PRD.md`, `ARCHITECTURE.md`, and `DETAIL-DESIGN.md` i
 
 ## 3. Product outcome
 
-A developer must be able to instrument an agent in under five minutes, run or import a trace, inspect a finding linked to immutable event evidence, replay the scenario under a changed policy, and use the same result as a local CLI or CI security gate. The hosted judge path must work without signup. The local path must work through Docker Compose. A deterministic keyless mode must remain functional when OpenAI Platform access is unavailable.
+A developer must be able to instrument an agent, run or import a trace, inspect a finding linked to immutable event evidence, replay the scenario under a changed policy, and use the same result as a local CLI or CI security gate. The hosted judge path must work without signup. The local path must work through Docker Compose. A deterministic keyless mode must remain functional when OpenAI Platform access is unavailable.
 
 ## 4. Release scope
 
@@ -40,7 +40,7 @@ Do not add a detector without labeled fixtures or claim framework support withou
 
 Maintain fast unit tests and release-level verification commands. `make verify-demo` must run both demonstration modes, required detector assertions, redaction, comparison, CI thresholds, and page smoke tests. `make verify-benchmark` must publish metrics for the exact labeled-suite version. `make verify-adapters` must validate both framework adapters. `make verify-clean` must build the complete container stack and the SQLite quickstart from clean state. Recorded and live model analyses require separate verification commands.
 
-Measure setup time, time to first finding, replay determinism, evidence-citation validity, instrumentation overhead, CI consistency, detector precision and recall on the labeled suite, and pilot task completion. Report sample sizes and limitations.
+Measure setup completion, successful finding identification, replay determinism, evidence-citation validity, instrumentation overhead, CI consistency, detector precision and recall on the labeled suite, and pilot task completion. Report sample sizes and limitations.
 
 ## 9. Codex build record
 
@@ -56,4 +56,4 @@ Use the following prompt from the repository root:
 
 ## 11. Definition of submission-ready
 
-Submission-ready means the hosted no-signup demonstration and clean Docker path work; the two adapters and 32 scenarios pass; detectors cite valid evidence; vulnerable and protected replays are reproducible; CI thresholds work; the recorded GPT-5.6 artifact is labeled; live analysis degrades safely; the five-engineer pilot and benchmark are documented; the repository has a license and complete README; the public video is under three minutes with voiceover; and the Devpost entry includes the correct repository, judge test path, category, and primary `/feedback` session ID.
+Submission-ready means the hosted no-signup demonstration and clean Docker path work; the two adapters and 32 scenarios pass; detectors cite valid evidence; vulnerable and protected replays are reproducible; CI thresholds work; the recorded GPT-5.6 artifact is labeled; live analysis degrades safely; the five-engineer pilot and benchmark are documented; the repository has a license and complete README; the public video includes voiceover; and the Devpost entry includes the correct repository, judge test path, category, and primary `/feedback` session ID.

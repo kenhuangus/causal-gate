@@ -24,11 +24,12 @@ uv run python main.py
 make verify-demo
 make verify-benchmark
 make verify-adapters
+make verify-release
 ```
 
-`make verify-demo` runs Python tests, the end-to-end CLI assertion, and the production frontend build. The 32-case labeled benchmark consists of two adversarial and two benign near-miss variants for each of the eight detector classes. Reported precision and recall apply only to this synthetic suite.
+`make verify-demo` runs the Python tests and end-to-end CLI assertion. `make verify-release` adds the benchmark, adapter, recorded-artifact, and production frontend checks. The 32-case labeled benchmark consists of two adversarial and two benign near-miss variants for each of the eight detector classes. Reported precision and recall apply only to this synthetic suite.
 
-## Five-minute SDK integration
+## SDK integration
 
 ```python
 from agentflight import IntentContract, Recorder, trace_tool
@@ -68,7 +69,7 @@ The eight rules are protected-data egress, missing approval, unsafe tool chainin
 
 The demonstration contains no real secret, external retrieval, or outbound side effect. Baseline mode is explicitly observational; protected mode is deny-by-default. Event payloads have a separate redacted representation, byte-accurate bounds, same-run parent checks, and immutable idempotency keys. Model output, when added, must remain untrusted structured data and cannot suppress deterministic findings or execute tools. `.env*` files are ignored except `.env.example`.
 
-Public deployments run with `AGENTFLIGHT_DEMO_MODE=true`. In this mode anonymous users can run the synthetic scenarios and access only execution identifiers created by those actions; list, create, append, and complete APIs are disabled, guessed identifiers return 404, request streams are capped, and demo actions are rate-limited. Private developer ingestion requires `AGENTFLIGHT_DEMO_MODE=false` plus a server-side `AGENTFLIGHT_ADMIN_TOKEN`; creation, retrieval, reporting, comparison, and live analysis all require that token in this profile. This token is not a substitute for production workspace identity and authorization.
+Public deployments run with `AGENTFLIGHT_DEMO_MODE=true`. In this mode anonymous users can run the synthetic scenarios and access only execution identifiers created by those actions; list, create, append, and complete APIs are disabled, guessed identifiers return 404, request streams are capped, and demo actions are rate-limited. Public demo retention is bounded to 64 execution records with a one-hour TTL; insertion and pruning share the same store transaction, and expired identifiers lose access. Private developer ingestion requires `AGENTFLIGHT_DEMO_MODE=false` plus a server-side `AGENTFLIGHT_ADMIN_TOKEN`; creation, retrieval, reporting, comparison, and live analysis all require that token in this profile. This token is not a substitute for production workspace identity and authorization.
 
 This prototype is a developer security instrument, not a SIEM, compliance certification, or claim of production-scale detector validation.
 
@@ -99,7 +100,9 @@ gcloud artifacts repositories create agentflight --repository-format=docker --lo
 gcloud builds submit --config cloudbuild.yaml
 ```
 
-The configuration exposes only the synthetic judge service. Cloud SQL, a private worker, Secret Manager, retention, and authenticated workspaces are target-production topology, not included in this repository's deployed judge profile. Do not inject a product runtime key during image build.
+Cloud Build tags the image with its always-populated build ID, so the same configuration works for manual submissions and repository-triggered builds.
+
+The configuration exposes only the synthetic judge service. Cloud SQL, a private worker, Secret Manager, long-term production retention, and authenticated workspaces are target-production topology, not included in this repository's deployed judge profile. Do not inject a product runtime key during image build.
 
 ## Repository map
 

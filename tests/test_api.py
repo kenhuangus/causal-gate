@@ -1,3 +1,5 @@
+import sqlite3
+
 from fastapi.testclient import TestClient
 
 from agentflight.api import create_app
@@ -50,6 +52,43 @@ def test_reset_is_scoped_and_does_not_delete_another_judge_run():
     second = c.post("/api/v1/demo/reset").json()
     assert first != second
     assert c.get(f"/api/v1/executions/{first['baseline']}").status_code == 200
+    assert c.get(f"/api/v1/executions/{second['baseline']}").status_code == 200
+
+
+def test_public_demo_quota_prunes_records_and_access_ids():
+    store = TraceStore(":memory:")
+    app = create_app(store, demo_max_records=3)
+    c = TestClient(app)
+    ids = [c.post("/api/v1/demo/baseline").json()["id"] for _ in range(4)]
+    assert list(app.state.demo_ids) == ids[-3:]
+    assert store.get(ids[0]) is None
+    assert c.get(f"/api/v1/executions/{ids[0]}").status_code == 404
+    assert c.get(f"/api/v1/executions/{ids[-1]}").status_code == 200
+
+
+def test_public_demo_ttl_expires_access_and_storage(monkeypatch):
+    now = 1_000.0
+    monkeypatch.setattr("agentflight.api.time.time", lambda: now)
+    store = TraceStore(":memory:")
+    app = create_app(store, demo_ttl_seconds=10)
+    c = TestClient(app)
+    execution_id = c.post("/api/v1/demo/baseline").json()["id"]
+    now = 1_011.0
+    assert c.get(f"/api/v1/executions/{execution_id}").status_code == 404
+    assert execution_id not in app.state.demo_ids
+    assert store.get(execution_id) is None
+
+
+def test_public_demo_sqlite_batch_pruning_is_bounded(tmp_path):
+    path = tmp_path / "demo.db"
+    store = TraceStore(str(path))
+    c = TestClient(create_app(store, demo_max_records=2))
+    first = c.post("/api/v1/demo/reset").json()
+    second = c.post("/api/v1/demo/reset").json()
+    with sqlite3.connect(path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM public_demo_executions").fetchone()[0] == 2
+        assert connection.execute("SELECT COUNT(*) FROM executions").fetchone()[0] == 2
+    assert c.get(f"/api/v1/executions/{first['baseline']}").status_code == 404
     assert c.get(f"/api/v1/executions/{second['baseline']}").status_code == 200
 
 

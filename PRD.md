@@ -62,7 +62,7 @@ The system shall export a Markdown or JSON incident report containing the intent
 
 The repository shall contain a vulnerable research agent with a retrieval tool, protected-file tool, and outbound-message tool. All tools shall operate on synthetic local data.
 
-### FR-9 Five-minute developer integration
+### FR-9 Developer integration
 
 The SDK shall support a minimal integration path consisting of package installation, recorder initialization, and wrapping existing tool functions. The quickstart shall produce a visible trace without requiring a developer to rewrite agent control flow. Framework-specific adapters are optional; the stable event contract and manual SDK path are required.
 
@@ -84,16 +84,16 @@ Tool execution shall be deny-by-default in protected mode. The demo shall never 
 
 ## 8. Success metrics
 
-The demo is successful when the baseline run completes, applicable detectors identify seeded violations, GPT-5.6 analysis links conclusions to valid evidence events, protected mode blocks egress, replay shows the changed outcome, and the same scenario fails a configured CI policy check. Setup should take less than five minutes from a documented command. The principal dashboard path should load in less than two seconds on the included fixture. Automated tests should cover event schemas, detectors, redaction, structured model output, framework adapters, CLI behavior, CI thresholds, and replay isolation.
+The demo is successful when the baseline run completes, applicable detectors identify seeded violations, GPT-5.6 analysis links conclusions to valid evidence events, protected mode blocks egress, replay shows the changed outcome, and the same scenario fails a configured CI policy check. Setup must work from the documented command, and the principal dashboard path must load reliably on the included fixture. Automated tests should cover event schemas, detectors, redaction, structured model output, framework adapters, CLI behavior, CI thresholds, and replay isolation.
 
-The product-impact hypothesis is that an AI engineer can identify the first policy-divergent event and verify a mitigation in under five minutes using AgentFlight Recorder, compared with manually correlating raw prompts, logs, and tool records. The evaluation shall measure time to first finding, detector precision and recall on the labeled suite, evidence-citation validity, replay reproducibility, instrumentation overhead, CI decision consistency, and setup completion. A small pilot with at least five AI engineers shall record task-completion time and structured usability feedback. These prototype measurements shall not be presented as production performance claims.
+The product-impact hypothesis is that AgentFlight Recorder helps an AI engineer identify the first policy-divergent event and verify a mitigation without manually correlating raw prompts, logs, and tool records. The evaluation shall measure successful finding identification, detector precision and recall on the labeled suite, evidence-citation validity, replay reproducibility, instrumentation overhead, CI decision consistency, and setup completion. A small pilot with at least five AI engineers shall record task completion and structured usability feedback. These prototype measurements shall not be presented as production performance claims.
 
 ## 8.1 Judging-criteria proof plan
 
 | Criterion | Evidence the submission must show | Target |
 | --- | --- | --- |
 | Technological Implementation | Instrumented agent, typed append-only trace, deterministic data-flow rules, validated GPT-5.6 analysis, policy enforcement, and replay | One end-to-end fixture plus automated tests for every security rule |
-| Design | A coherent task-to-finding-to-replay journey with progressive disclosure and synthetic data | A judge completes the primary journey without documentation in under three minutes |
+| Design | A coherent task-to-finding-to-replay journey with progressive disclosure and synthetic data | A judge completes the primary journey without documentation |
 | Potential Impact | Named AI-engineer and security-engineer audience, measurable investigation workflow, and exportable evidence | Time-to-first-finding and mitigation-verification measurements included |
 | Quality of the Idea | Intent-to-action evidence graph plus counterfactual replay, rather than generic logging or model-only classification | Demo visibly distinguishes trace display, causal evidence, and control verification |
 
@@ -113,7 +113,7 @@ The release priorities are a complete instrumented scenario, evidence-linked det
 
 The video opens with the authorized task, runs the vulnerable agent, and shows the unexpected protected-data egress. It then opens the finding, follows the evidence chain from retrieved injection to tool proposal and outbound call, enables the policy, and replays the same input. The protected run blocks the action and produces a comparison report. The narration identifies which code and tests Codex produced and where GPT-5.6 performs intent-contract and trace analysis.
 
-The target video allocation is 20 seconds for the problem and audience, 35 seconds for the baseline run, 45 seconds for the evidence path, 35 seconds for protected replay, 20 seconds for the measurable result, and 25 seconds for Codex and GPT-5.6 implementation evidence. Remaining time is reserved for transitions. The recording shall show the working interface rather than architecture slides for most of its duration.
+The video should cover the problem and audience, baseline run, evidence path, protected replay, measurable result, and Codex and GPT-5.6 implementation evidence. The recording shall prioritize the working interface over architecture slides.
 
 ## 12. Panel-informed product review
 
@@ -127,7 +127,7 @@ The named panel and public professional profiles suggest several relevant review
 | Leah Belsky, VP of Education | Access, AI literacy, education, and workforce learning | Make the evidence chain understandable to engineers learning secure agent design, without turning this entry into an education product |
 | Peter Steinberger, Member of Technical Staff | Hands-on open-source agent building, high-velocity shipping, and practical personal agents | Deliver runnable code, a useful agent scenario, small integration surface, and inspectable implementation |
 
-The panel review sets the priority order to: reliable hosted journey, evidence-linked replay, five-minute SDK integration, testable open repository, CI usefulness, benchmark evidence, and then breadth of detector and framework support. Feature count never substitutes for a coherent product experience.
+The panel review sets the priority order to: reliable hosted journey, evidence-linked replay, documented SDK integration, testable open repository, CI usefulness, benchmark evidence, and then breadth of detector and framework support. Feature count never substitutes for a coherent product experience.
 
 ## 13. Review sources
 
@@ -150,4 +150,4 @@ AgentFlight Recorder and AI Engineering Book Lab shall be submitted as separate 
 
 ## 16. Submission release gates
 
-The project cannot be marked submission-ready unless the hosted reset works in a clean browser, the Docker path works from a clean checkout, the vulnerable and protected fixture assertions pass, the demo contains no real secret or external side effect, the recorded GPT-5.6 artifact is labeled, the build log matches commits, the repository has a license, the public video is shorter than three minutes, and the Devpost submission is not left in draft state.
+The project cannot be marked submission-ready unless the hosted reset works in a clean browser, the Docker path works from a clean checkout, the vulnerable and protected fixture assertions pass, the demo contains no real secret or external side effect, the recorded GPT-5.6 artifact is labeled, the build log matches commits, the repository has a license, the public video is complete, and the Devpost submission is not left in draft state.

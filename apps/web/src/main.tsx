@@ -69,7 +69,7 @@ function EmptyState({busy,onRun}:{busy:boolean;onRun:()=>void}){
     <p className="kicker">NO TRACE LOADED</p>
     <h2 id="empty-title">Investigate a seeded agent incident</h2>
     <p>Replay a synthetic indirect prompt-injection scenario, follow its causal evidence, then prove a deny-by-default control changes the outcome.</p>
-    <button className="button primary" onClick={onRun} disabled={busy}><Icon name="play"/>Run 12-event baseline</button>
+    <button className="button primary" onClick={onRun} disabled={busy}><Icon name="play"/>Run 9-event baseline</button>
     <ul aria-label="Scenario guarantees"><li><Icon name="check"/>No signup or API key</li><li><Icon name="check"/>No real secrets</li><li><Icon name="check"/>No external tools</li></ul>
   </section>;
 }
@@ -173,7 +173,7 @@ function App(){
 
   const execute=async(mode:'baseline'|'protected')=>{
     if(busy)return;
-    if(!online){setError('You appear to be offline. Reconnect to the local AgentFlight service and retry.');setFailedAction(mode);return}
+    if(!online){setError('You appear to be offline. Reconnect and retry.');setFailedAction(mode);return}
     setBusy(mode);setFailedAction(null);setError('');setStatus(`${mode==='baseline'?'Vulnerable scenario':'Protected replay'} running.`);
     try{
       const value=await api<Run>(`/api/v1/demo/${mode}`,{method:'POST'});
@@ -187,26 +187,26 @@ function App(){
         setStatus(`Protected replay complete with ${value.findings.length} findings.`);
         requestAnimationFrame(()=>document.getElementById('comparison-summary')?.focus());
       }
-    }catch(error){setFailedAction(mode);setError(error instanceof DOMException&&error.name==='AbortError'?'The local service timed out. Retry when it is ready.':'The demo could not complete. Check the local service and retry.');setStatus('Demo failed.')}finally{setBusy(null)}
+    }catch(error){setFailedAction(mode);setError(error instanceof DOMException&&error.name==='AbortError'?'The AgentFlight service timed out. Retry when it is ready.':'The demo could not complete. Check the AgentFlight service and retry.');setStatus('Demo failed.')}finally{setBusy(null)}
   };
   const reset=async()=>{
     if(busy)return;setBusy('reset');setFailedAction(null);setError('');setStatus('Resetting the synthetic demo.');
     try{await api('/api/v1/demo/reset',{method:'POST'});setRun(null);setProtected(null);setComparison(null);setSelected(null);setStatus('Demo reset. Ready to run the synthetic scenario.');requestAnimationFrame(()=>document.getElementById('run-baseline')?.focus())}
-    catch{setFailedAction('reset');setError('The demo could not reset. Check the local service and retry.');setStatus('Reset failed.')}finally{setBusy(null)}
+    catch{setFailedAction('reset');setError('The demo could not reset. Check the AgentFlight service and retry.');setStatus('Reset failed.')}finally{setBusy(null)}
   };
   const retry=()=>failedAction==='reset'?reset():execute(failedAction||'baseline');
 
   return <div className="app-shell">
     <a className="skip-link" href="#main-content">Skip to investigation</a>
     <header className="app-header"><a className="brand" href="#main-content" aria-label="AgentFlight Recorder home"><span className="brand-mark"><Icon name="flight"/></span><span><b>AgentFlight</b><small>RECORDER</small></span></a><span className="header-divider"/><p>Agent security investigation</p><nav aria-label="Product links"><a href="/api/docs">API docs</a><ModeDisclosure health={health} recorded={recorded} online={online}/></nav></header>
-    {!online&&<div className="offline-banner" role="status"><Icon name="warning"/><span><b>Local service offline</b> — reconnect to run or replay. Loaded evidence remains available.</span></div>}
+    {!online&&<div className="offline-banner" role="status"><Icon name="warning"/><span><b>Network unavailable</b> — reconnect to run or replay. Loaded evidence remains available.</span></div>}
     <main id="main-content">
       <section className="hero" aria-labelledby="page-title"><div className="hero-copy"><div className="eyebrow-row"><span>DEVELOPER SECURITY</span><i/><span>INCIDENT WORKBENCH</span></div><h1 id="page-title">See where intent<br/><em>became action.</em></h1><p>Trace an agent’s first unsafe decision to its evidence, apply a control, and replay the exact fixture to verify the outcome.</p></div>
         <div className="hero-rail"><div className="scenario-label"><span>SEEDED SCENARIO</span><b>Indirect prompt injection</b><small>vendor-research-injection-v1</small></div><div className="hero-actions"><button id="run-baseline" className="button primary" onClick={()=>execute('baseline')} disabled={!!busy} aria-busy={busy==='baseline'}><Icon name="play"/>{busy==='baseline'?'Recording baseline…':run?'Run new baseline':'Run vulnerable scenario'}</button><button className="button protected-action" onClick={()=>execute('protected')} disabled={!!busy||!run} aria-busy={busy==='protected'}><Icon name="shield"/>{busy==='protected'?'Applying control…':'Replay with protection'}</button><button className="button icon-only" onClick={reset} disabled={!!busy||!run} aria-busy={busy==='reset'} aria-label="Reset synthetic demo" title="Reset demo"><Icon name="reset"/></button></div><p className="action-note"><Icon name="check"/>Synthetic fixture · no network tools or live model calls</p></div>
       </section>
       <p className="sr-only" aria-live="polite" aria-atomic="true">{status}</p>
       {error&&<div className="error-banner" role="alert"><Icon name="warning"/><div><b>Action unavailable</b><span>{error}</span></div><button className="button" onClick={retry} disabled={!!busy}>Retry action</button><button className="dismiss" onClick={()=>setError('')} aria-label="Dismiss error">×</button></div>}
-      {!run?<div className="preflight-grid"><EmptyState busy={!!busy} onRun={()=>execute('baseline')}/><div className="preflight-side"><BenchmarkCard benchmark={benchmark} loading={metaLoading}/><section className="workflow-card"><p className="kicker">3-MINUTE WORKFLOW</p><h2>From incident to proof</h2><ol><li><span>01</span><div><b>Record</b><p>Capture the baseline’s intent, tools, state, and policy decisions.</p></div></li><li><span>02</span><div><b>Investigate</b><p>Follow evidence-linked rules to the first divergent event.</p></div></li><li><span>03</span><div><b>Verify</b><p>Replay one fixture under protection and compare outcomes.</p></div></li></ol></section></div></div>:
+      {!run?<div className="preflight-grid"><EmptyState busy={!!busy} onRun={()=>execute('baseline')}/><div className="preflight-side"><BenchmarkCard benchmark={benchmark} loading={metaLoading}/><section className="workflow-card"><p className="kicker">INVESTIGATION WORKFLOW</p><h2>From incident to proof</h2><ol><li><span>01</span><div><b>Record</b><p>Capture the baseline’s intent, tools, state, and policy decisions.</p></div></li><li><span>02</span><div><b>Investigate</b><p>Follow evidence-linked rules to the first divergent event.</p></div></li><li><span>03</span><div><b>Verify</b><p>Replay one fixture under protection and compare outcomes.</p></div></li></ol></section></div></div>:
       <>
         <section id="execution-summary" className="execution-bar" tabIndex={-1} aria-label="Baseline execution summary"><div><span>EXECUTION</span><b title={run.id}>{shortId(run.id)}</b></div><div><span>FIXTURE</span><b title={run.fixture_hash}>{run.fixture_hash}</b></div><div><span>POLICY MODE</span><b className="observe"><i/>Observe only</b></div><div><span>TRACE</span><b>{run.events.length} events</b></div><div><span>RISK</span><b className="risk"><i/>{run.findings.length} open</b></div></section>
         {protectedRun&&comparison&&<ComparisonView baseline={run} protectedRun={protectedRun} comparison={comparison}/>}
@@ -214,7 +214,7 @@ function App(){
         <section className="workbench"><FindingList findings={run.findings} selected={selected} onSelect={setSelected}/><Timeline run={run} evidence={evidence}/><EvidencePanel selected={selected} run={run} recorded={recorded}/></section>
       </>}
     </main>
-    <footer className="app-footer"><span><span className="status-dot ok"/>Local synthetic environment</span><span>Payloads redacted by the service</span><span>Schema v1.0</span><a href="/api/docs">API reference</a></footer>
+    <footer className="app-footer"><span><span className="status-dot ok"/>Synthetic judge environment</span><span>Payloads redacted by the service</span><span>Schema v1.0</span><a href="/api/docs">API reference</a></footer>
   </div>;
 }
 

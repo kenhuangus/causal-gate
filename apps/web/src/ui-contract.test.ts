@@ -30,9 +30,11 @@ describe('judge UI contracts',()=>{
   });
 
   it('supports offline, empty, loading, error, and busy states',()=>{
-    for(const state of ['Local service offline','NO TRACE LOADED','Loading benchmark','Action unavailable','Recording baseline…']){
+    for(const state of ['Network unavailable','NO TRACE LOADED','Loading benchmark','Action unavailable','Recording baseline…']){
       expect(source).toContain(state);
     }
+    expect(source).toContain('Run 9-event baseline');
+    expect(source).not.toContain('Run 12-event baseline');
   });
 
   it('is self-contained and includes resilient accessibility media rules',()=>{

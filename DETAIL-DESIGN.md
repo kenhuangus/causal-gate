@@ -100,7 +100,7 @@ The local path is `docker compose up --wait`, followed by the printed applicatio
 | FR-6 | Fixture loader, simulator adapters, comparison service | Same fixture hash produces different policy outcome |
 | FR-7 | Markdown and JSON serializers | Export contains contract, evidence, decision, and comparison |
 | FR-8 | Synthetic research-agent package | Clean judge environment runs without external tools |
-| FR-9 | SDK package, manual calls, decorators, adapter examples | New example emits a trace in under five minutes |
+| FR-9 | SDK package, manual calls, decorators, adapter examples | New example emits a valid trace through the documented integration |
 | FR-10 | CLI commands and CI workflow | Seeded critical scenario returns the configured failing status |
 | FR-11 | At least 30 labeled fixtures and benchmark runner | Versioned precision, recall, citation, overhead, and replay metrics publish |
 | FR-12 | Finding workflow fields and evidence package | A mitigation is assigned, compared, and exported without altering trace evidence |
