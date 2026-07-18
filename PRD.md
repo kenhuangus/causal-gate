@@ -46,6 +46,12 @@ The release shall implement detectors for protected-data egress, missing approva
 
 When Platform access is configured, GPT-5.6 shall evaluate the trace and intent contract for intent divergence and prompt-injection influence. The model must return schema-validated JSON and cite only event identifiers present in the trace. Unsupported claims shall be rejected or marked as unverified. The submitted repository shall include one redacted analysis artifact generated during development, its schema-validation result, prompt version, and referenced fixture hash. The keyless judge path shall label this artifact as recorded and shall never imply that it is a live call.
 
+### FR-4A Intent-based access control
+
+The runtime shall map every shipped effectful tool through a closed, versioned ontology and evaluate it through a single complete-mediation adapter. Authority shall be the deterministic intersection of authenticated identity, agent configuration, a short-lived signed intent grant, organizational constraints, and runtime context. Grants shall bind subject, user relationship, execution, purpose, contract and ontology digests, tools, actions, resources, data classes, destinations, prohibited effects, budgets, delegation depth, and expiry. Allowed requests shall receive short-lived, request-bound, single-use permits. High-impact approvals shall be signed and exact-action-bound. Unknown terms, signature or digest mismatch, replay, argument mutation, privilege-expanding delegation, sensitive external flow, and untrusted-content control shall fail closed.
+
+GPT-5.6 Sol with explicit medium reasoning may compile natural language into a least-privilege candidate contract and may analyze a redacted trace. It shall not issue a grant, satisfy human approval, alter deterministic policy, or promote a release. The UI shall distinguish requested and resolved model identifiers, observe-only and enforced decisions, candidate intent and signed authority, and fixed-profile complete mediation.
+
 ### FR-5 Timeline and evidence view
 
 The dashboard shall display runs, events, tool calls, policy decisions, findings, and an evidence panel. Selecting a finding shall highlight the referenced events. Secrets shall be masked by default.

@@ -23,11 +23,18 @@ def test_health_and_demo_journey():
     assert "AFR-EGRESS-001" in report.text
     flight_record = c.get(f"/api/v1/executions/{baseline['id']}/intent-flight-record")
     assert flight_record.status_code == 200
-    assert flight_record.json()["first_divergence"]["sequence"] == 3
+    assert flight_record.json()["first_divergence"]["sequence"] == 5
     assert flight_record.json()["plan_event_ids"]
     assert flight_record.json()["decision_records"]
     assert flight_record.json()["causal_chain_event_ids"]
     assert comparison.json()["promotion_gate"]["verdict"] == "promote"
+    authorization = c.get(f"/api/v1/executions/{baseline['id']}/authorization-record")
+    assert authorization.status_code == 200
+    assert authorization.json()["complete_mediation"] is True
+    assert authorization.json()["denied"] == 2
+    ontology = c.get("/api/v1/authorization/ontology").json()
+    assert ontology["version"] == "agentflight-ontology/1.0"
+    assert ontology["digest"].startswith("sha256:")
 
 
 def test_missing_execution_is_404():
@@ -44,6 +51,36 @@ def test_live_analysis_disabled_fails_safely(monkeypatch):
     assert response.status_code == 503
     assert "disabled" in response.json()["detail"]
     assert c.get("/health").json()["live_analysis"] == "disabled"
+    compiled = c.post("/api/v1/intent/compile/live", json={"request": "Research Acme."})
+    assert compiled.status_code == 503
+    assert "disabled" in compiled.json()["detail"]
+
+
+def test_grant_issuance_is_private_explicit_and_runtime_signed(monkeypatch):
+    monkeypatch.setenv("AGENTFLIGHT_DEMO_MODE", "false")
+    monkeypatch.setenv("AGENTFLIGHT_ADMIN_TOKEN", "admin-test-token")
+    monkeypatch.setenv("AGENTFLIGHT_GRANT_SIGNING_KEY", "runtime-grant-signing-key-at-least-32-bytes")
+    body = {
+        "execution_id": "run_private",
+        "approver": "user:owner",
+        "confirmation": "I_APPROVE_THIS_INTENT",
+        "contract": {
+            "goal": "Research public vendor data.",
+            "purpose_id": "purpose.vendor.public_research",
+            "subject_id": "agent:research",
+            "on_behalf_of": "user:owner",
+            "allowed_tools": ["retrieve"],
+            "allowed_resource_types": ["resource.public"],
+            "allowed_data_classes": ["data.public"],
+            "allowed_destinations": ["destination.local"],
+        },
+    }
+    c = client()
+    assert c.post("/api/v1/intent/grants", json=body).status_code == 401
+    response = c.post("/api/v1/intent/grants", json=body, headers={"X-AgentFlight-Admin": "admin-test-token"})
+    assert response.status_code == 201
+    assert response.json()["execution_id"] == "run_private"
+    assert response.json()["signature"]
 
 
 def test_public_demo_returns_only_redacted_event_payloads():

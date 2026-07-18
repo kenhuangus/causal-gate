@@ -1,4 +1,4 @@
-substitutions: {_REGION: us-central1, _SERVICE: agentflight-recorder, _ATTESTATION_SECRET: agentflight-attestation-key}
+substitutions: {_REGION: us-central1, _SERVICE: agentflight-recorder, _ATTESTATION_SECRET: agentflight-attestation-key, _OPENAI_SECRET: agentflight-openai-api-key, _GRANT_SECRET: agentflight-grant-signing-key}
 steps:
   - name: gcr.io/cloud-builders/docker
     args: [build, -t, '${_REGION}-docker.pkg.dev/$PROJECT_ID/agentflight/${_SERVICE}:$BUILD_ID', .]
@@ -6,5 +6,5 @@ steps:
     args: [push, '${_REGION}-docker.pkg.dev/$PROJECT_ID/agentflight/${_SERVICE}:$BUILD_ID']
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
-    args: [run, deploy, '${_SERVICE}', --image, '${_REGION}-docker.pkg.dev/$PROJECT_ID/agentflight/${_SERVICE}:$BUILD_ID', --region, '${_REGION}', --platform, managed, --allow-unauthenticated, '--service-account=agentflight-web@$PROJECT_ID.iam.gserviceaccount.com', --set-env-vars, 'AGENTFLIGHT_DEMO_MODE=true,AGENTFLIGHT_SOURCE_REVISION=$BUILD_ID,AGENTFLIGHT_RUNNER_IDENTITY=cloud-build-agentflight', --set-secrets, 'AGENTFLIGHT_ATTESTATION_KEY=${_ATTESTATION_SECRET}:latest', --port, '8080', --memory, 512Mi, --cpu, '1', --min-instances, '0', --max-instances, '1', --concurrency, '8']
+    args: [run, deploy, '${_SERVICE}', --image, '${_REGION}-docker.pkg.dev/$PROJECT_ID/agentflight/${_SERVICE}:$BUILD_ID', --region, '${_REGION}', --platform, managed, --allow-unauthenticated, '--service-account=agentflight-web@$PROJECT_ID.iam.gserviceaccount.com', --set-env-vars, 'AGENTFLIGHT_DEMO_MODE=true,AGENTFLIGHT_LIVE_ANALYSIS_ENABLED=true,OPENAI_MODEL=gpt-5.6-sol,AGENTFLIGHT_SOURCE_REVISION=$BUILD_ID,AGENTFLIGHT_RUNNER_IDENTITY=cloud-build-agentflight', --set-secrets, 'AGENTFLIGHT_ATTESTATION_KEY=${_ATTESTATION_SECRET}:latest,OPENAI_API_KEY=${_OPENAI_SECRET}:latest,AGENTFLIGHT_GRANT_SIGNING_KEY=${_GRANT_SECRET}:latest', --port, '8080', --memory, 512Mi, --cpu, '1', --min-instances, '0', --max-instances, '1', --concurrency, '8']
 images: ['${_REGION}-docker.pkg.dev/$PROJECT_ID/agentflight/${_SERVICE}:$BUILD_ID']

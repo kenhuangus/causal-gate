@@ -15,7 +15,10 @@ type IntentFlightRecord={execution_id:string;clauses:IntentClause[];bindings:Int
 type Health={status:string;mode:string;live_analysis:string;version:string};
 type Benchmark={suite_version:string;scenarios:number;true_positives:number;false_positives:number;false_negatives:number;precision:number;recall:number;specificity:number;deterministic:boolean;evidence_scope?:string;confidence_intervals?:{precision:{lower:number};recall:{lower:number};specificity:{lower:number}}};
 type AssuranceSuite={eligible:boolean;verdict:string;scope:string;production_safety_certification:boolean;cases:number;distinct_fixtures:number;scenario_families:number;channels:number;pass_interval:{lower:number;upper:number;estimate:number;method?:string};provenance:{artifact_digest:string;runner_identity:string;attestation_algorithm:string;source_revision?:string;detector_version?:string;policy_version?:string};checks?:{name:string;passed:boolean;summary:string}[];limitations:string[]};
-type RecordedAnalysis={mode:'recorded';model:string;prompt_version:string;fixture_hash:string;generated_at:string;validation:'passed';findings:{finding_type:string;summary:string;severity:string;confidence:number}[]};
+type SemanticAnalysis={mode:'live'|'recorded';model:string;requested_model?:string|null;reasoning_effort?:'medium';prompt_version:string;fixture_hash:string;response_id:string;generated_at:string;validation:'passed';findings:{finding_type:string;summary:string;reasoning_summary?:string;severity:string;confidence:number;recommended_control?:string}[]};
+type RecordedAnalysis=SemanticAnalysis&{mode:'recorded'};
+type AuthorizationDecision={event_id:string;decision_id:string;outcome:string;enforcement:string;reason_code:string;reason:string;tool:string;action:string;resource_type:string;data_class:string;destination:string;effects:string[];matched_policy_ids:string[];obligations:string[];permit_issued:boolean};
+type AuthorizationRecord={execution_id:string;enforcement_model:string;ontology_version:string;ontology_digest:string;policy_version:string;grant_id:string|null;grant_digest:string|null;decisions:AuthorizationDecision[];allowed:number;denied:number;approval_required:number;complete_mediation:boolean;limitations:string[]};
 type BusyAction='baseline'|'protected'|'reset';
 
 const api=async<T,>(path:string,options?:RequestInit):Promise<T>=>{
@@ -78,7 +81,7 @@ function EmptyState({busy,onRun}:{busy:boolean;onRun:()=>void}){
     <p className="kicker">NO TRACE LOADED</p>
     <h2 id="empty-title">Find the earliest detected intent divergence</h2>
     <p>Build an Intent Flight Record for a seeded prompt-injection incident, locate the causal-minimal violation, then test whether a control restores alignment.</p>
-    <button className="button primary" onClick={onRun} disabled={busy}><Icon name="play"/>Run 9-event baseline</button>
+    <button className="button primary" onClick={onRun} disabled={busy}><Icon name="play"/>Run 13-event baseline</button>
     <ul aria-label="Scenario guarantees"><li><Icon name="check"/>No signup or API key</li><li><Icon name="check"/>No real secrets</li><li><Icon name="check"/>No external tools</li></ul>
   </section>;
 }
@@ -129,6 +132,28 @@ function IntentCard({run}:{run:Run}){
     <summary><span className="intent-summary-copy"><span className="kicker">AUTHORIZATION BOUNDARY</span><strong>Intent contract</strong></span><span>v1 · {run.intent.allowed_tools.length} allowed tools</span><Icon name="arrow"/></summary>
     <div className="intent-body"><div><span>Authorized goal</span><p>{run.intent.goal}</p></div><div><span>Allowed tools</span><p>{run.intent.allowed_tools.join(' · ')||'None'}</p></div><div><span>Protected resources</span><p>{run.intent.protected_resources?.join(' · ')||'None'}</p></div><div><span>Approval gates</span><p>{run.intent.approval_required?.join(' · ')||'None'}</p></div></div>
   </details>;
+}
+
+function AuthorizationCard({record,loading,error}:{record:AuthorizationRecord|null;loading:boolean;error:string}){
+  if(loading)return <section className="authorization-card authorization-loading" aria-busy="true"><div className="intent-flight-skeleton"><i/><i/><i/></div><span>Verifying complete mediation and signed authority…</span></section>;
+  if(error)return <section className="authorization-card authorization-error"><Icon name="warning"/><div><p className="kicker">INTENT-BASED ACCESS CONTROL</p><h2>Authorization evidence unavailable</h2><p>{error}</p></div></section>;
+  if(!record)return null;
+  return <section className="authorization-card" aria-labelledby="authorization-title">
+    <header className="authorization-heading"><div><p className="kicker">INTENT-BASED ACCESS CONTROL</p><h2 id="authorization-title">Authority is an intersection, not a model opinion</h2><p>Every mapped tool proposal is normalized through the same deterministic policy path before execution.</p></div><span className={`mediation-seal ${record.complete_mediation?'complete':'incomplete'}`}><Icon name={record.complete_mediation?'check':'warning'}/>{record.complete_mediation?'COMPLETE MEDIATION':'REVIEW REQUIRED'}</span></header>
+    <div className="authority-equation"><span>IDENTITY</span><b>∩</b><span>AGENT</span><b>∩</b><span>INTENT GRANT</span><b>∩</b><span>ORGANIZATION</span><b>∩</b><span>RUNTIME</span><strong>→ LEAST PRIVILEGE</strong></div>
+    <div className="authorization-meta"><div><span>ONTOLOGY</span><b>{record.ontology_version}</b><code title={record.ontology_digest}>{shortId(record.ontology_digest)}</code></div><div><span>SIGNED GRANT</span><b>{record.grant_id?shortId(record.grant_id):'Unavailable'}</b><code title={record.grant_digest||''}>{record.grant_digest?shortId(record.grant_digest):'No digest'}</code></div><div><span>DECISIONS</span><b>{record.allowed} allow · {record.denied} deny</b><code>{record.approval_required} approval step-up</code></div></div>
+    <div className="authorization-decisions" role="list" aria-label="Deterministic authorization decisions">{record.decisions.map(item=><article key={item.event_id} className={`authorization-decision ${item.outcome}`} role="listitem"><div className="decision-outcome"><span><Icon name={item.outcome==='allow'?'check':'shield'}/></span><div><b>{item.tool}</b><small>{item.action}</small></div><em>{item.outcome.toUpperCase()}</em></div><p>{item.reason}</p><dl><div><dt>Resource</dt><dd>{item.resource_type}</dd></div><div><dt>Data</dt><dd>{item.data_class}</dd></div><div><dt>Destination</dt><dd>{item.destination}</dd></div></dl><footer><code>{item.reason_code}</code><span className={item.enforcement}>{titleCase(item.enforcement)}</span>{item.permit_issued&&<span>Single-use permit</span>}</footer></article>)}</div>
+    <p className="authorization-disclosure"><Icon name="database"/>The closed ontology, signed grant, exact-action approvals, short-lived permits, and replay ledger are deterministic. Natural-language or model output can only propose a candidate contract.</p>
+  </section>;
+}
+
+function LiveJudgeAnalysis({health,analysis,busy,error,onAnalyze}:{health:Health|null;analysis:SemanticAnalysis|null;busy:boolean;error:string;onAnalyze:()=>void}){
+  const enabled=health?.live_analysis==='enabled';
+  return <section className="live-judge-card" aria-labelledby="live-judge-title">
+    <div className="live-judge-copy"><p className="kicker">OPTIONAL SEMANTIC INVESTIGATOR</p><h2 id="live-judge-title">GPT‑5.6 Sol, bounded by deterministic evidence</h2><p>Use medium reasoning to find semantic intent drift in a minimized, redacted trace. The result adds investigative evidence; it cannot authorize a tool or change the promotion gate.</p><div className="model-spec"><span>REQUESTED MODEL <b>gpt-5.6-sol</b></span><span>REASONING <b>medium</b></span><span>API <b>Responses</b></span></div></div>
+    <div className="live-judge-action"><button className="button primary" onClick={onAnalyze} disabled={!enabled||busy} aria-busy={busy}><Icon name="pulse"/>{busy?'Analyzing redacted trace…':analysis?.mode==='live'?'Run live analysis again':'Investigate with GPT‑5.6 Sol'}</button><span className={`availability ${enabled?'enabled':'disabled'}`}><i/>{enabled?'Runtime enabled':'Runtime disabled'}</span>{error&&<p role="alert">{error}</p>}</div>
+    {analysis?.mode==='live'&&<div className="live-result"><header><div><span>VALIDATED LIVE RESPONSE</span><b>{analysis.model}</b></div><code title={analysis.response_id}>{shortId(analysis.response_id)}</code></header><div>{analysis.findings.length?analysis.findings.map((finding,index)=><article key={`${finding.finding_type}-${index}`}><span className={`severity ${finding.severity}`}><i/>{finding.severity}</span><div><h3>{finding.summary}</h3><p>{finding.reasoning_summary||'Evidence-linked semantic finding.'}</p></div><strong>{Math.round(finding.confidence*100)}%</strong></article>):<p>No semantic findings were returned.</p>}</div><footer>Requested {analysis.requested_model||'gpt-5.6-sol'} · resolved {analysis.model} · {analysis.reasoning_effort||'medium'} reasoning · prompt {analysis.prompt_version}</footer></div>}
+  </section>;
 }
 
 const focusEvent=(id:string)=>window.setTimeout(()=>document.getElementById(`event-${id}`)?.focus(),0);
@@ -253,6 +278,8 @@ function App(){
   const [error,setError]=useState(''),[status,setStatus]=useState('Ready to run the synthetic scenario.'),[online,setOnline]=useState(navigator.onLine);
   const [health,setHealth]=useState<Health|null>(null),[benchmark,setBenchmark]=useState<Benchmark|null>(null),[assurance,setAssurance]=useState<AssuranceSuite|null>(null),[recorded,setRecorded]=useState<RecordedAnalysis|null>(null),[metaLoading,setMetaLoading]=useState(true);
   const [intentRecord,setIntentRecord]=useState<IntentFlightRecord|null>(null),[intentLoading,setIntentLoading]=useState(false),[intentError,setIntentError]=useState('');
+  const [authorization,setAuthorization]=useState<AuthorizationRecord|null>(null),[authorizationLoading,setAuthorizationLoading]=useState(false),[authorizationError,setAuthorizationError]=useState('');
+  const [liveAnalysis,setLiveAnalysis]=useState<SemanticAnalysis|null>(null),[liveBusy,setLiveBusy]=useState(false),[liveError,setLiveError]=useState('');
   const evidence=useMemo(()=>new Set(selected?.evidence_event_ids||[]),[selected]);
 
   useEffect(()=>{
@@ -278,10 +305,11 @@ function App(){
         setRun(value);setProtected(null);setComparison(null);setSelected(value.findings[0]||null);
         setStatus(`Vulnerable scenario complete with ${value.findings.length} findings.`);
         requestAnimationFrame(()=>document.getElementById('execution-summary')?.focus());
-        setIntentRecord(null);setIntentError('');setIntentLoading(true);
-        try{setIntentRecord(await api<IntentFlightRecord>(`/api/v1/executions/${value.id}/intent-flight-record`))}
-        catch{setIntentError('The Intent Flight Record could not be loaded.')}
-        finally{setIntentLoading(false)}
+        setIntentRecord(null);setIntentError('');setIntentLoading(true);setAuthorization(null);setAuthorizationError('');setAuthorizationLoading(true);setLiveAnalysis(null);setLiveError('');
+        const records=await Promise.allSettled([api<IntentFlightRecord>(`/api/v1/executions/${value.id}/intent-flight-record`),api<AuthorizationRecord>(`/api/v1/executions/${value.id}/authorization-record`)]);
+        if(records[0].status==='fulfilled')setIntentRecord(records[0].value);else setIntentError('The Intent Flight Record could not be loaded.');
+        if(records[1].status==='fulfilled')setAuthorization(records[1].value);else setAuthorizationError('The authorization record could not be loaded.');
+        setIntentLoading(false);setAuthorizationLoading(false);
       }else{
         setProtected(value);
         if(run)setComparison(await api<Comparison>(`/api/v1/comparisons/${run.id}/${value.id}`));
@@ -292,8 +320,14 @@ function App(){
   };
   const reset=async()=>{
     if(busy)return;setBusy('reset');setFailedAction(null);setError('');setStatus('Resetting the synthetic demo.');
-    try{await api('/api/v1/demo/reset',{method:'POST'});setRun(null);setProtected(null);setComparison(null);setSelected(null);setIntentRecord(null);setIntentError('');setIntentLoading(false);setStatus('Demo reset. Ready to run the synthetic scenario.');requestAnimationFrame(()=>document.getElementById('run-baseline')?.focus())}
+    try{await api('/api/v1/demo/reset',{method:'POST'});setRun(null);setProtected(null);setComparison(null);setSelected(null);setIntentRecord(null);setIntentError('');setIntentLoading(false);setAuthorization(null);setAuthorizationError('');setAuthorizationLoading(false);setLiveAnalysis(null);setLiveError('');setStatus('Demo reset. Ready to run the synthetic scenario.');requestAnimationFrame(()=>document.getElementById('run-baseline')?.focus())}
     catch{setFailedAction('reset');setError('The demo could not reset. Check the AgentFlight service and retry.');setStatus('Reset failed.')}finally{setBusy(null)}
+  };
+  const analyzeWithSol=async()=>{
+    if(!run||liveBusy)return;
+    setLiveBusy(true);setLiveError('');setStatus('GPT-5.6 Sol is analyzing the minimized redacted trace.');
+    try{const result=await api<SemanticAnalysis>(`/api/v1/executions/${run.id}/analyze/live`,{method:'POST'});setLiveAnalysis(result);setStatus(`Live semantic analysis completed with ${result.findings.length} findings.`)}
+    catch{setLiveError('Live analysis is unavailable. Deterministic authorization and findings remain valid.');setStatus('Live semantic analysis unavailable.')}finally{setLiveBusy(false)}
   };
   const retry=()=>failedAction==='reset'?reset():execute(failedAction||'baseline');
 
@@ -303,7 +337,7 @@ function App(){
     {!online&&<div className="offline-banner" role="status"><Icon name="warning"/><span><b>Network unavailable</b> — reconnect to run or replay. Loaded evidence remains available.</span></div>}
     <main id="main-content">
       <section className="hero" aria-labelledby="page-title"><div className="hero-copy"><div className="eyebrow-row"><span>INTENT ASSURANCE</span><i/><span>SOFTWARE FACTORY EVIDENCE</span></div><h1 id="page-title">Find where intent<br/><em>diverged.</em></h1><p>Evaluate consequential actions against a declared contract, preserve concurrent divergence, and test a candidate control before release review.</p></div>
-        <div className="hero-rail"><div className="scenario-label"><span>SEEDED SCENARIO</span><b>Indirect prompt injection</b><small>vendor-research-injection-v1</small></div><div className="hero-actions"><button id="run-baseline" className="button primary" onClick={()=>execute('baseline')} disabled={!!busy} aria-busy={busy==='baseline'}><Icon name="play"/>{busy==='baseline'?'Recording baseline…':run?'Run new baseline':'Run vulnerable scenario'}</button><button className="button protected-action" onClick={()=>execute('protected')} disabled={!!busy||!run} aria-busy={busy==='protected'}><Icon name="shield"/>{busy==='protected'?'Applying control…':'Replay with protection'}</button><button className="button icon-only" onClick={reset} disabled={!!busy||!run} aria-busy={busy==='reset'} aria-label="Reset synthetic demo" title="Reset demo"><Icon name="reset"/></button></div><p className="action-note"><Icon name="check"/>Synthetic fixture · no network tools or live model calls</p></div>
+        <div className="hero-rail"><div className="scenario-label"><span>SEEDED SCENARIO</span><b>Indirect prompt injection</b><small>vendor-research-injection-v1</small></div><div className="hero-actions"><button id="run-baseline" className="button primary" onClick={()=>execute('baseline')} disabled={!!busy} aria-busy={busy==='baseline'}><Icon name="play"/>{busy==='baseline'?'Recording baseline…':run?'Run new baseline':'Run vulnerable scenario'}</button><button className="button protected-action" onClick={()=>execute('protected')} disabled={!!busy||!run} aria-busy={busy==='protected'}><Icon name="shield"/>{busy==='protected'?'Applying control…':'Replay with protection'}</button><button className="button icon-only" onClick={reset} disabled={!!busy||!run} aria-busy={busy==='reset'} aria-label="Reset synthetic demo" title="Reset demo"><Icon name="reset"/></button></div><p className="action-note"><Icon name="check"/>Synthetic fixture · simulated tools · live analysis only when explicitly requested</p></div>
       </section>
       <p className="sr-only" aria-live="polite" aria-atomic="true">{status}</p>
       {error&&<div className="error-banner" role="alert"><Icon name="warning"/><div><b>Action unavailable</b><span>{error}</span></div><button className="button" onClick={retry} disabled={!!busy}>Retry action</button><button className="dismiss" onClick={()=>setError('')} aria-label="Dismiss error">×</button></div>}
@@ -312,7 +346,9 @@ function App(){
         <section id="execution-summary" className="execution-bar" tabIndex={-1} aria-label="Baseline execution summary"><div><span>EXECUTION</span><b title={run.id}>{shortId(run.id)}</b></div><div><span>FIXTURE</span><b title={run.fixture_hash}>{run.fixture_hash}</b></div><div><span>POLICY MODE</span><b className="observe"><i/>Observe only</b></div><div><span>TRACE</span><b>{run.events.length} events</b></div><div><span>RISK</span><b className="risk"><i/>{run.findings.length} open</b></div></section>
         {protectedRun&&comparison&&<><ComparisonView baseline={run} protectedRun={protectedRun} comparison={comparison}/><AssuranceSuiteCard suite={assurance} loading={metaLoading}/></>}
         <IntentCard run={run}/>
+        <AuthorizationCard record={authorization} loading={authorizationLoading} error={authorizationError}/>
         <IntentFlightRecordView record={intentRecord} loading={intentLoading} error={intentError}/>
+        <LiveJudgeAnalysis health={health} analysis={liveAnalysis} busy={liveBusy} error={liveError} onAnalyze={analyzeWithSol}/>
         <section className="workbench"><FindingList findings={run.findings} selected={selected} onSelect={setSelected}/><Timeline run={run} evidence={evidence}/><EvidencePanel selected={selected} run={run} recorded={recorded}/></section>
       </>}
     </main>

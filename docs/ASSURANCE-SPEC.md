@@ -56,13 +56,23 @@ Plan and decision summaries, alternatives, alignment, and confidence are applica
 
 `confidence` has semantics `self_reported_uncalibrated`. It is not a probability and cannot affect promotion until a held-out study reports reliability diagrams, Brier score, and a preregistered calibration-error measure.
 
-## 7. Gate hierarchy
+## 7. Intent authorization semantics
 
-### 7.1 Fixture replay gate
+Let `I`, `A`, `G`, `O`, and `R` be the action sets permitted by authenticated identity, the configured agent, the signed intent grant, organizational policy, and runtime context. An action is eligible only if it is in `I ∩ A ∩ G ∩ O ∩ R`; restrictions never add an element. The implementation refines membership over the tuple `(purpose, tool, action, resource type, data class, destination, effects, provenance, budget, delegation depth, approval)` using a closed, content-digested ontology. Unknown terms and missing mappings deny.
+
+An intent grant is valid only if its HMAC, expiry, execution identifier, contract digest, ontology version, and ontology digest verify. Delegated grants must be set-subsets of parent authority, cannot weaken prohibitions or approvals, must reduce delegation depth, cannot expand budgets, and cannot outlive the parent. A linked approval is valid only for the exact execution, grant, tool, and arguments digest. Approval is conjunctive and never overrides absent grant authority.
+
+An allow decision produces a short-lived permit whose signature binds the complete authorization-request digest and grant digest. Execution atomically consumes its nonce; mutation after decision or replay fails. Complete mediation means every recorded effectful tool proposal in the fixed ontology-mapped adapter profile has a linked authorization decision. It is not a claim that arbitrary uninstrumented code is mediated.
+
+The GPT-5.6 Sol compiler produces only a candidate contract. Deterministic ontology validation and an authenticated, explicit human approval are separate prerequisites for signed grant issuance. No model response, confidence, or explanation participates in the authorization predicate.
+
+## 8. Gate hierarchy
+
+### 8.1 Fixture replay gate
 
 The fixture gate checks identical fixture digest, exact replay linkage, detected divergence restoration, finding resolution, non-regressing coverage, and zero unbound consequential candidate actions. Its scope is `single_fixture_replay`; `production_safety_certification` is always false.
 
-### 7.2 Authenticated suite gate
+### 8.2 Authenticated suite gate
 
 The software-factory gate evaluates multiple baseline/candidate pairs and requires:
 
@@ -78,7 +88,7 @@ The verdict is bound to suite, source revision, artifact digest, detector versio
 
 The bundled synthetic suite uses a modest demonstration threshold. Production thresholds require domain-specific risk analysis, representative sampling, independent labels, and human authorization for high-impact actions.
 
-## 8. Validation protocol
+## 9. Validation protocol
 
 Validation uses immutable corpus manifests with stable case IDs, fixture hashes, target-rule labels, label source, split, and annotation status. Development and locked-test cases must be separated before detector changes.
 
@@ -92,11 +102,16 @@ Required adversarial properties include:
 - forged, cross-run, future, duplicate, and self-referential evidence is rejected;
 - removing a required causal edge cannot strengthen a conclusion;
 - tampering with provenance or the fixture manifest invalidates attestation.
+- restricting any grant dimension never converts a deny into an allow;
+- grant, approval, request, or permit tampering fails closed;
+- approvals do not authorize tools absent from the grant;
+- permits reject argument mutation and second use; and
+- child grants never exceed parent authority.
 
-## 9. Trusted computing base
+## 10. Trusted computing base
 
 The trusted computing base comprises the contract source, recorder, storage validation, verifier and policy implementations, fixture corpus, suite runner, attestation-key custody, and human release authority. Findings stored with sealed redacted runs are trusted inputs because redaction can remove detector evidence; production runners should generate and sign them inside the trusted boundary.
 
-## 10. Remaining scientific validation
+## 11. Remaining scientific validation
 
 The bundled corpus is synthetic regression evidence. General validity requires independently annotated real-world traces, inter-reviewer agreement, a locked held-out dataset, preregistered thresholds, distribution-shift testing, calibration if confidence is used, and external replication. Implementation cannot truthfully manufacture that external evidence.

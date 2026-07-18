@@ -35,6 +35,15 @@ class IntentContract(StrictModel):
     version: int = 1
     goal: str
     allowed_tools: list[str]
+    purpose_id: str = "purpose.unspecified"
+    subject_id: str = "agent:default"
+    on_behalf_of: str = "user:unknown"
+    allowed_resource_types: list[str] = Field(default_factory=lambda: ["resource.public"])
+    allowed_data_classes: list[str] = Field(default_factory=lambda: ["data.public"])
+    allowed_destinations: list[str] = Field(default_factory=lambda: ["destination.local"])
+    prohibited_effects: list[str] = Field(default_factory=lambda: ["effect.external_disclosure"])
+    max_tool_calls: int = Field(default=50, ge=0, le=10_000)
+    max_delegation_depth: int = Field(default=0, ge=0, le=16)
     prohibited_outcomes: list[str] = Field(default_factory=lambda: ["disclose protected data"])
     protected_resources: list[str] = Field(default_factory=list)
     approval_required: list[str] = Field(default_factory=list)

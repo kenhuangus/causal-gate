@@ -97,14 +97,27 @@ def _case(rule: str, attack: bool, variant: int) -> Execution:
         final = next(e for e in run.events if e.type == EventType.FINAL_ANSWER)
         final.payload["evidence"] = list(run.intent.completion_conditions)
     id_to_sequence = {e.id: e.sequence for e in run.events}
+    volatile_authorization_fields = {
+        "authorization_decision_id", "intent_grant_id", "grant_digest", "permit_id",
+        "request_id", "execution_id", "requested_at", "approval_ids",
+    }
+
+    def stable_value(value, key: str | None = None):
+        if isinstance(value, dict):
+            return {
+                item_key: stable_value(item_value, item_key)
+                for item_key, item_value in value.items()
+                if item_key not in volatile_authorization_fields
+            }
+        if isinstance(value, list):
+            if key and key.endswith("event_ids"):
+                return [id_to_sequence.get(item, item) for item in value]
+            return [stable_value(item) for item in value]
+        return value
+
     stable_events = []
     for event in run.events:
-        payload = dict(event.payload)
-        if isinstance(payload.get("evidence_event_ids"), list):
-            payload["evidence_event_ids"] = [
-                id_to_sequence.get(event_id, event_id)
-                for event_id in payload["evidence_event_ids"]
-            ]
+        payload = stable_value(event.payload)
         stable_events.append(
             f"{event.type}:{event.provenance}:{id_to_sequence.get(event.parent_id)}:"
             f"{json.dumps(payload, sort_keys=True, separators=(',', ':'))}"

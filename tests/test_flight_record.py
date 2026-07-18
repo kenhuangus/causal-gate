@@ -54,7 +54,7 @@ def test_plan_and_decision_events_require_bounded_explicit_summaries():
 
 def test_demo_flight_records_are_deterministic_and_keep_event_count():
     baseline, protected = run_demo("baseline"), run_demo("protected")
-    assert len(baseline.events) == 9
+    assert len(baseline.events) == 13
     assert [event.type for event in baseline.events].count(EventType.PLAN) == 1
     assert [event.type for event in baseline.events].count(EventType.DECISION) == 1
     assert all(
@@ -65,7 +65,7 @@ def test_demo_flight_records_are_deterministic_and_keep_event_count():
     baseline_record = analyze_flight_record(baseline)
     protected_record = analyze_flight_record(protected)
     assert baseline_record.first_divergence is not None
-    assert baseline_record.first_divergence.sequence == 3
+    assert baseline_record.first_divergence.sequence == 5
     assert baseline_record.first_divergence.event_id == baseline_record.plan_event_ids[0]
     assert protected_record.first_divergence is None
     assert baseline_record.coverage.coverage_ratio == protected_record.coverage.coverage_ratio
@@ -73,11 +73,11 @@ def test_demo_flight_records_are_deterministic_and_keep_event_count():
     assert baseline_record.first_divergence_event_id == baseline_record.plan_event_ids[0]
     assert baseline_record.first_divergence_reason
     assert baseline_record.intent_coverage == baseline_record.coverage.coverage_ratio
-    assert baseline_record.decision_records[0].summary
-    assert baseline_record.decision_records[0].bound_clause_ids
-    assert baseline_record.decision_records[0].evidence_event_ids
-    assert baseline_record.decision_records[0].alternatives_considered
-    assert baseline_record.decision_records[0].confidence == 0.91
+    application_decision = next(item for item in baseline_record.decision_records if item.confidence == 0.91)
+    assert application_decision.summary
+    assert application_decision.bound_clause_ids
+    assert application_decision.evidence_event_ids
+    assert application_decision.alternatives_considered
     assert baseline_record.causal_chain_event_ids
     assert baseline_record.unbound_consequential_actions == []
     protected_goal = next(clause for clause in protected_record.clauses if clause.kind == IntentClauseKind.GOAL)

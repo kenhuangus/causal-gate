@@ -36,7 +36,8 @@ def test_coverage_separates_declaration_verification_and_action_binding():
 
 def test_divergence_frontier_preserves_incomparable_minimal_violations():
     run = run_demo("protected").model_copy(deep=True)
-    for sequence in (len(run.events) + 1, len(run.events) + 2):
+    added_sequences = {len(run.events) + 1, len(run.events) + 2}
+    for sequence in added_sequences:
         run.events.append(Event(
             execution_id=run.id,
             sequence=sequence,
@@ -48,7 +49,7 @@ def test_divergence_frontier_preserves_incomparable_minimal_violations():
         ))
     record = analyze_flight_record(run)
     assert len(record.divergence_frontier) == 2
-    assert {item.sequence for item in record.divergence_frontier} == {8, 9}
+    assert {item.sequence for item in record.divergence_frontier} == added_sequences
     assert record.first_divergence == record.divergence_frontier[0]
     assert all(item.order_basis == "causal_partial_order" for item in record.divergence_frontier)
 

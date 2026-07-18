@@ -77,6 +77,16 @@ The intent-analysis layer compiles each contract into full canonical SHA-256 cla
 
 The gate is deliberately conservative: model-generated explanations or code changes cannot promote themselves. A fixture replay produces only a scoped recommendation. The software-factory gate additionally requires a signed fixture manifest, content-addressed verifier artifact, minimum fixture diversity, all replay checks, and a preregistered lower confidence bound. Neither result is a general production-safety certification.
 
+### Intent-based access control
+
+AgentFlight also enforces intent at the tool boundary. A closed, versioned ontology maps each shipped tool to an action, resource type, data class, destination, and effects. Human-approved contracts become short-lived HMAC-signed `IntentGrant` capabilities bound to a subject, user relationship, execution, purpose, ontology digest, tool budget, and delegation depth. Authorization is the deterministic intersection:
+
+`identity ∩ agent ∩ signed intent grant ∩ organization policy ∩ runtime context`
+
+Every mapped tool proposal receives an `allow`, `deny`, or `require_approval` decision before execution. Allowed calls receive a request-bound, short-lived, single-use permit; argument mutation, permit replay, grant tampering, unknown ontology terms, authority-expanding delegation, sensitive external flow, and untrusted-content control all fail closed. High-impact approvals are signed and bound to the exact execution, grant, tool, and arguments digest. Approval is an additional restriction and can never create permission absent from a grant.
+
+The synthetic baseline intentionally records denials in observe-only mode so judges can see the unsafe counterfactual. Protected mode enforces the same decisions. `GET /api/v1/executions/{id}/authorization-record` reports complete-mediation evidence for the fixed ontology-mapped adapter profile, while `GET /api/v1/authorization/ontology` exposes the version and digest. The private `POST /api/v1/intent/grants` route requires administrator authorization, an explicit human confirmation phrase, and a runtime-only signing key.
+
 The formal semantics, trusted-computing-base boundary, statistical protocol, and claim limitations are specified in [`docs/ASSURANCE-SPEC.md`](docs/ASSURANCE-SPEC.md).
 
 ## Security model
@@ -91,7 +101,9 @@ This prototype is a developer security instrument, not a SIEM, compliance certif
 
 The implementation follows the OpenAI Agents SDK pattern of one explicit agent path, narrow deterministic tools, stable trace boundaries, and behavior-oriented evals. The deterministic release path does not make an OpenAI API call. The browser, tests, CLI fixtures, build, and documentation do not need or access a runtime key.
 
-The optional server-only semantic analyzer is disabled unless both `AGENTFLIGHT_LIVE_ANALYSIS_ENABLED=true` and `OPENAI_API_KEY` are present. It uses the official OpenAI Responses API with `OPENAI_MODEL` (default `gpt-5.6`), a minimized redacted trace, strict structured output, same-run evidence validation, bounded timeout/retry, sanitized errors, and a small hourly process quota. Its results are separate provenance-labeled artifacts: they cannot suppress deterministic findings, change policy, or execute a tool. The judge image includes the fixture-bound non-live artifact at `GET /api/v1/recorded-analysis`; its SHA-256 integrity field is verified before serving.
+The optional server-only semantic analyzer is disabled unless both `AGENTFLIGHT_LIVE_ANALYSIS_ENABLED=true` and `OPENAI_API_KEY` are present. It uses the official OpenAI Responses API with `OPENAI_MODEL` (default `gpt-5.6-sol`) and explicit medium reasoning, a minimized redacted trace, strict structured output, same-run evidence validation, bounded timeout/retry, sanitized errors, and a small hourly process quota. Its results record both requested and resolved model identifiers. They are separate provenance-labeled artifacts: they cannot suppress deterministic findings, change policy, issue a grant, or execute a tool. The judge image includes the fixture-bound non-live artifact at `GET /api/v1/recorded-analysis`; its SHA-256 integrity field is verified before serving.
+
+`POST /api/v1/intent/compile/live` uses the same runtime key and GPT-5.6 Sol medium reasoning to convert natural language into a least-privilege candidate contract. Closed-ontology validation removes unknown authority and ambiguity forces clarification. The result explicitly grants no authority; only the separate authenticated human-approval route can sign a grant.
 
 To generate the submission's recorded artifact through the same product path at runtime:
 
@@ -112,7 +124,12 @@ Create an Artifact Registry repository named `agentflight`, then submit the pinn
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
 gcloud artifacts repositories create agentflight --repository-format=docker --location=us-central1
 openssl rand -hex 32 | gcloud secrets create agentflight-attestation-key --data-file=-
-gcloud secrets add-iam-policy-binding agentflight-attestation-key --member="serviceAccount:agentflight-web@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
+# Add the existing Platform key at runtime; never place it in source or the image:
+gcloud secrets create agentflight-openai-api-key --data-file=-
+openssl rand -hex 32 | gcloud secrets create agentflight-grant-signing-key --data-file=-
+for SECRET in agentflight-attestation-key agentflight-openai-api-key agentflight-grant-signing-key; do
+  gcloud secrets add-iam-policy-binding "$SECRET" --member="serviceAccount:agentflight-web@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
+done
 gcloud builds submit --config cloudbuild.yaml
 ```
 

@@ -14,7 +14,9 @@ flowchart TD
     SDK --> API
     API --> DB["SQLite trace store"]
     API --> AN["Analysis engine"]
-    AN --> M["GPT-5.6"]
+    AN --> M["GPT-5.6 Sol · medium"]
+    SDK --> AZ["Intent authorizer"]
+    AZ --> ON["Closed ontology + signed grants"]
     API --> RP["Replay runner"]
 ```
 
@@ -32,6 +34,8 @@ The conformance engine compiles a contract into canonical full-digest clauses, e
 
 The policy engine evaluates proposed tool calls before execution. Baseline mode records violations but permits seeded demo behavior. Protected mode denies violations or requests approval. This behavior is explicit in the user interface to avoid presenting monitoring as enforcement.
 
+The intent authorizer is the effectful-tool reference monitor for the shipped profile. It normalizes a proposal through the versioned ontology, verifies the execution-bound signed grant, intersects identity, agent, purpose, resource, data, destination, organizational, provenance, budget, approval, and delegation constraints, then issues a short-lived request-bound permit. The mediated adapter consumes that permit exactly once immediately before calling the tool. Unknown mappings, invalid signatures, stale grants or approvals, changed arguments, and replayed permits deny by default. The process-local replay ledger is appropriate to the single-instance judge profile; a scaled deployment must replace it with an atomic shared nonce store.
+
 The replay runner loads immutable fixtures, replaces side-effecting tools with simulators, and executes the same task and retrieved content under a selected policy version. It links the new execution to its source execution.
 
 The dashboard provides run selection, an Intent Flight Record, a first-divergence view, intent-contract display, finding details, causal event inspection, and baseline-versus-protected comparison with a promotion gate.
@@ -47,8 +51,8 @@ sequenceDiagram
     participant Analyzer
     User->>Agent: Authorized research task
     Agent->>Recorder: Intent and trace events
-    Agent->>Policy: Proposed protected action
-    Policy-->>Agent: Observe or deny
+    Agent->>Policy: Typed, ontology-normalized proposal
+    Policy-->>Agent: Deny, require signed approval, or single-use permit
     Recorder->>Analyzer: Completed trace
     Analyzer->>Analyzer: Rules and GPT-5.6 review
     Analyzer-->>User: Evidence-linked findings
@@ -56,11 +60,11 @@ sequenceDiagram
 
 ## 5. Data model
 
-`Execution` contains identity, policy mode, contract, events, findings, fixture digest, and replay link. `Event` contains recorder sequence, logical clock, emitter, parent, causal predecessors, validated evidence, payload, redacted payload, provenance, and sensitivity. `IntentClause` has a canonical identifier and criticality. `ClauseEvaluation` records status, verifier identity/version, and evidence. `IntentFlightRecord` contains the divergence frontier, separate coverage measures, explicit decisions, causal-provenance events, and unbound actions. `PromotionGate` is fixture-scoped. `SuitePromotionGate` adds authenticated provenance, artifact and fixture digests, diversity checks, and a Wilson pass interval.
+`Execution` contains identity, policy mode, contract, events, findings, fixture digest, and replay link. `Event` contains recorder sequence, logical clock, emitter, parent, causal predecessors, validated evidence, payload, redacted payload, provenance, and sensitivity. `IntentGrant` binds the approved contract and ontology digests to identity, purpose, scope, limits, expiry, and signature. `AuthorizationRequest` carries normalized semantics and an arguments digest. `ApprovalArtifact` and `ExecutionPermit` are signed exact-action capabilities; permits are short-lived and single-use. `AuthorizationRecord` summarizes policy evidence and complete mediation. `IntentClause` has a canonical identifier and criticality. `ClauseEvaluation` records status, verifier identity/version, and evidence. `IntentFlightRecord` contains the divergence frontier, separate coverage measures, explicit decisions, causal-provenance events, and unbound actions. `PromotionGate` is fixture-scoped. `SuitePromotionGate` adds authenticated provenance, artifact and fixture digests, diversity checks, and a Wilson pass interval.
 
 ## 6. API boundaries
 
-The shipped API exposes health, the synthetic baseline/protected demo and reset, fixture-scoped execution retrieval, `GET /api/v1/executions/{id}/intent-flight-record`, report export, deterministic comparison with a promotion gate, benchmark output, the verified recorded-analysis artifact, and an opt-in live-analysis request. In private ingestion mode it additionally exposes create, append, complete, and list endpoints behind an administrator token; event ingestion accepts idempotency keys. Job queues, finding assignment, and asynchronous workers are target-production extensions, not shipped endpoints.
+The shipped API exposes health, the synthetic baseline/protected demo and reset, fixture-scoped execution retrieval, the Intent Flight Record, authorization record, ontology metadata, report export, deterministic comparison with a promotion gate, benchmark output, the verified recorded-analysis artifact, opt-in GPT-5.6 Sol analysis, and live candidate-intent compilation. In private ingestion mode it additionally exposes create, append, complete, list, and explicit human-confirmed signed-grant issuance endpoints behind an administrator token; event ingestion accepts idempotency keys. Job queues, finding assignment, and asynchronous workers are target-production extensions, not shipped endpoints.
 
 ## 6.1 Evidence-gated improvement loop
 
@@ -93,7 +97,7 @@ Every event write has an idempotency key. Analysis records its prompt version, m
 
 ## 10. Technology choices
 
-The shipped implementation uses Python 3.12, FastAPI, Pydantic, SQLite, React, TypeScript, and Pytest. The target hosted platform adds Cloud Run, Cloud Tasks, Cloud SQL for PostgreSQL, Cloud Storage, Artifact Registry, Secret Manager, and Cloud Logging. The official OpenAI SDK invokes GPT-5.6 with structured output when Platform access is configured. Docker Compose supplies the local judge path, and the CLI runs benchmark fixtures without the web stack.
+The shipped implementation uses Python 3.12, FastAPI, Pydantic, SQLite, React, TypeScript, and Pytest. The target hosted platform adds Cloud Run, Cloud Tasks, Cloud SQL for PostgreSQL, Cloud Storage, Artifact Registry, Secret Manager, and Cloud Logging. The official OpenAI SDK invokes GPT-5.6 Sol with explicit medium reasoning and strict structured output when Platform access is configured. Docker Compose supplies the local judge path, and the CLI runs benchmark fixtures without the web stack.
 
 ## 11. Codex and GPT-5.6 responsibility boundary
 

@@ -1,0 +1,28 @@
+{
+  "version": "agentflight-ontology/1.0",
+  "actions": {
+    "action.read": null,
+    "action.read.public": "action.read",
+    "action.read.protected": "action.read",
+    "action.transform": null,
+    "action.summarize": "action.transform",
+    "action.communicate": null,
+    "action.communicate.external": "action.communicate",
+    "action.state.write": null,
+    "action.delegate": null
+  },
+  "resource_types": ["resource.public", "resource.protected", "resource.state", "resource.agent"],
+  "purposes": ["purpose.vendor.public_research", "purpose.security.investigation", "purpose.customer.support", "purpose.unspecified"],
+  "data_classes": ["data.public", "data.internal", "data.personal", "data.protected", "data.credential", "data.regulated"],
+  "destinations": ["destination.local", "destination.internal", "destination.external"],
+  "effects": ["effect.data_read", "effect.local_output", "effect.external_disclosure", "effect.state_change", "effect.privilege_change"],
+  "tools": {
+    "retrieve": {"action": "action.read.public", "resource_type": "resource.public", "data_class": "data.public", "destination": "destination.local", "effects": ["effect.data_read"]},
+    "read_public": {"action": "action.read.public", "resource_type": "resource.public", "data_class": "data.public", "destination": "destination.local", "effects": ["effect.data_read"]},
+    "summarize": {"action": "action.summarize", "resource_type": "resource.public", "data_class": "data.public", "destination": "destination.local", "effects": ["effect.local_output"]},
+    "read_secret": {"action": "action.read.protected", "resource_type": "resource.protected", "data_class": "data.protected", "destination": "destination.local", "effects": ["effect.data_read"]},
+    "send_message": {"action": "action.communicate.external", "resource_type": "resource.public", "data_class": "data.public", "destination": "destination.external", "effects": ["effect.external_disclosure"]},
+    "write_memory": {"action": "action.state.write", "resource_type": "resource.state", "data_class": "data.internal", "destination": "destination.local", "effects": ["effect.state_change"]},
+    "delegate_agent": {"action": "action.delegate", "resource_type": "resource.agent", "data_class": "data.internal", "destination": "destination.internal", "effects": ["effect.privilege_change"]}
+  }
+}

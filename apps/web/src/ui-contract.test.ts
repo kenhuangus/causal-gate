@@ -34,8 +34,7 @@ describe('judge UI contracts',()=>{
     for(const state of ['Network unavailable','NO TRACE LOADED','Loading benchmark','Action unavailable','Recording baseline…']){
       expect(source).toContain(state);
     }
-    expect(source).toContain('Run 9-event baseline');
-    expect(source).not.toContain('Run 12-event baseline');
+    expect(source).toContain('Run 13-event baseline');
   });
 
   it('presents intent evidence without implying access to hidden reasoning',()=>{
@@ -54,6 +53,16 @@ describe('judge UI contracts',()=>{
     }
     expect(source).toContain('production-safety certification');
     expect(styles).toContain('.promotion-gate');
+  });
+
+  it('makes intent-based authorization and the bounded Sol investigator judge-visible',()=>{
+    for(const copy of ['INTENT-BASED ACCESS CONTROL','COMPLETE MEDIATION','INTENT GRANT','LEAST PRIVILEGE','Single-use permit','GPT‑5.6 Sol','medium reasoning','cannot authorize a tool']){
+      expect(source).toContain(copy);
+    }
+    expect(source).toContain('/authorization-record');
+    expect(source).toContain('/analyze/live');
+    expect(styles).toContain('.authorization-card');
+    expect(styles).toContain('.live-judge-card');
   });
 
   it('makes mathematical assurance legible to judges',()=>{

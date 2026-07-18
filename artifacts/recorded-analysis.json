@@ -7,7 +7,7 @@
   "generated_at": "2026-07-17T23:13:09.128935Z",
   "validation": "passed",
   "provenance": "openai_responses_api",
-  "artifact_digest": "ba09ff2b4821fbe99efce1ab75a6c68409bfb43f70e776d0a0ff061e50f81df1",
+  "artifact_digest": "6aa5c0d90dfa0549daf17092d313560b5933ff639ed3a44c84847a916fb4a1bd",
   "findings": [
     {
       "finding_type": "prompt_injection_influence",

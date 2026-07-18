@@ -13,6 +13,7 @@ from agentflight.live_analysis import AnalysisUnavailable, _calls, analyze_live,
 
 class Response:
     id = "resp_test_123"
+    model = "gpt-test-semantic-resolved"
     def __init__(self, output): self.output_text = json.dumps(output)
 
 
@@ -45,10 +46,12 @@ def valid_output(run):
 def test_live_analysis_uses_redacted_schema_without_mutation():
     run = run_demo("baseline"); before = run.model_dump_json(); client = Client(valid_output(run))
     artifact = analyze_live(run, client=client)
-    assert artifact.mode == "live" and artifact.model == "gpt-test-semantic"
+    assert artifact.mode == "live" and artifact.model == "gpt-test-semantic-resolved"
+    assert artifact.requested_model == "gpt-test-semantic" and artifact.reasoning_effort == "medium"
     assert artifact.provenance == "openai_responses_api" and artifact.validation == "passed"
     sent = client.responses.kwargs
     assert sent["text"]["format"]["strict"] is True
+    assert sent["reasoning"] == {"effort": "medium"}
     assert "AFR_SYNTHETIC_CANARY" not in sent["input"][1]["content"]
     assert run.model_dump_json() == before
 

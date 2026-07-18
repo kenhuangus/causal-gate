@@ -6,6 +6,7 @@ import threading
 import time
 from collections import OrderedDict, defaultdict, deque
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -13,12 +14,14 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from .assurance import SuitePromotionGate, run_synthetic_assurance_suite
+from .authorization import AuthorizationOntology, AuthorizationRecord, IntentGrant, authorization_record, issue_grant
 from .benchmark import run_benchmark
 from .demo import compare, run_demo
 from .detectors import analyze
 from .flight_record import analyze_flight_record
 from .models import Comparison, Event, Execution, FlightRecord, IntentContract, PolicyMode, StrictModel
 from .live_analysis import AnalysisArtifact, AnalysisUnavailable, analyze_live, verify_recorded_artifact
+from .intent_compiler import CompiledIntent, IntentCompilationUnavailable, compile_intent_live
 from .reporting import markdown_report
 from .redaction import redacted_event_payload
 from .storage import TraceStore
@@ -27,6 +30,17 @@ from .storage import TraceStore
 class CreateExecution(StrictModel):
     intent: IntentContract
     policy_mode: PolicyMode = PolicyMode.BASELINE
+
+
+class CompileIntentRequest(StrictModel):
+    request: str
+
+
+class ApproveIntentRequest(StrictModel):
+    execution_id: str
+    contract: IntentContract
+    approver: str
+    confirmation: Literal["I_APPROVE_THIS_INTENT"]
 
 
 PUBLIC_DEMO_MAX_RECORDS = 64
@@ -121,7 +135,9 @@ def create_app(
             chunks.append(chunk)
         body = b"".join(chunks)
         request._body = body
-        if request.url.path.startswith("/api/v1/demo") or request.url.path in {"/api/v1/benchmark", "/api/v1/assurance-suite"}:
+        if request.url.path.startswith("/api/v1/demo") or request.url.path in {
+            "/api/v1/benchmark", "/api/v1/assurance-suite", "/api/v1/intent/compile/live"
+        }:
             key = request.client.host if request.client else "unknown"
             now, bucket = time.monotonic(), app.state.rate[key]
             while bucket and bucket[0] < now - 60:
@@ -206,6 +222,49 @@ def create_app(
         if not run:
             raise HTTPException(404, "execution not found")
         return analyze_flight_record(run)
+
+    @app.get("/api/v1/executions/{execution_id}/authorization-record", response_model=AuthorizationRecord)
+    def execution_authorization_record(execution_id: str, request: Request):
+        require_execution_access(execution_id, request)
+        run = app.state.store.get(execution_id)
+        if not run:
+            raise HTTPException(404, "execution not found")
+        return authorization_record(run)
+
+    @app.get("/api/v1/authorization/ontology")
+    def authorization_ontology():
+        ontology = AuthorizationOntology.load_default()
+        return {
+            "version": ontology.version,
+            "digest": ontology.digest,
+            "actions": ontology.actions,
+            "resource_types": ontology.resource_types,
+            "data_classes": ontology.data_classes,
+            "destinations": ontology.destinations,
+            "effects": ontology.effects,
+            "mapped_tools": sorted(ontology.tools),
+        }
+
+    @app.post("/api/v1/intent/compile/live", response_model=CompiledIntent)
+    def compile_intent(body: CompileIntentRequest, request: Request):
+        if not app.state.demo_mode:
+            require_admin(request)
+        try:
+            return compile_intent_live(body.request)
+        except IntentCompilationUnavailable as exc:
+            raise HTTPException(503, str(exc))
+
+    @app.post("/api/v1/intent/grants", response_model=IntentGrant, status_code=201)
+    def approve_intent(body: ApproveIntentRequest, request: Request):
+        """Private control-plane operation; model output alone cannot invoke it."""
+        require_admin(request)
+        key = os.getenv("AGENTFLIGHT_GRANT_SIGNING_KEY", "")
+        if len(key.encode()) < 32:
+            raise HTTPException(503, "intent grant signing is not configured")
+        try:
+            return issue_grant(body.contract, body.execution_id, key, issuer=body.approver)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc))
 
     @app.get("/api/v1/executions/{execution_id}/report")
     def report(execution_id: str, request: Request, format: str = "markdown"):

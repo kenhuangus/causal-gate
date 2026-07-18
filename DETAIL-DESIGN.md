@@ -74,7 +74,7 @@ The GPT-5.6 detector receives event summaries and the intent contract. Its outpu
 
 ## 6. Policy evaluation
 
-`evaluate(proposal, contract, trace_context)` returns `allow`, `deny`, or `require_approval`. Evaluation order is prohibited outcome, resource boundary, tool authorization, approval rule, data-flow rule, then default deny. Baseline demo mode records the decision that protected mode would make but allows the simulator to continue. The interface labels this mode as observational.
+`authorize(request, signed_grant, runtime_context)` returns `allow`, `deny`, or `require_approval`. A closed ontology first normalizes tool, action, resource, data, destination, and effects. Evaluation verifies grant integrity and execution binding, then intersects identity, purpose, tool/action, resource, data class, destination, organizational prohibitions, sensitive data flow, untrusted provenance, tool budget, delegation depth, and exact-action approval. An allow result carries a signed 30-second permit bound to the complete request and grant digests; the mediated adapter consumes its nonce once immediately before execution. Baseline demo mode records the same decision in observe-only mode but allows only the synthetic simulator to continue. Protected mode enforces it. Approval never creates permission, and child grants must monotonically attenuate parent authority.
 
 ## 7. Replay design
 

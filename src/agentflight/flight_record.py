@@ -114,6 +114,37 @@ def analyze_flight_record(run: Execution) -> FlightRecord:
         if event.type == EventType.USER_INTENT:
             bind(goal, event, BindingStatus.OBSERVED, "Intent contract was recorded; behavior has not yet satisfied it.")
 
+        if event.type == EventType.POLICY_DECISION:
+            request = event.payload.get("request", {})
+            request = request if isinstance(request, dict) else {}
+            enforcement = event.payload.get("enforcement")
+            outcome = event.payload.get("decision")
+            # A policy decision proves that authorization was evaluated, not
+            # that the effect was actually blocked or completed. The linked
+            # proposal/result supplies behavior-specific satisfaction.
+            status = BindingStatus.OBSERVED
+            explicit_ids = request.get("intent_clause_ids", [])
+            for clause_id in explicit_ids if isinstance(explicit_ids, list) else []:
+                bind(
+                    clause_by_id.get(str(clause_id)), event, status,
+                    f"Intent authorization returned {outcome}: {event.payload.get('reason_code', 'policy decision')}.",
+                    verifier_id="AFR-INTENT-AUTHZ",
+                )
+            requested_tool = str(request.get("tool", ""))
+            tool_clause = clause_by_kind_subject.get((IntentClauseKind.TOOL_AUTHORIZATION, requested_tool))
+            if tool_clause and tool_clause.id not in explicit_ids:
+                bind(
+                    tool_clause, event, status,
+                    f"Intent authorization evaluated tool {requested_tool}.",
+                    verifier_id="AFR-INTENT-AUTHZ",
+                )
+            if not explicit_ids and tool_clause is None:
+                bind(
+                    goal, event, status,
+                    f"Intent authorization evaluated {requested_tool or 'a consequential action'}.",
+                    verifier_id="AFR-INTENT-AUTHZ",
+                )
+
         if event.type in {EventType.PLAN, EventType.DECISION}:
             for clause_id in event.payload.get("intent_clause_ids", []):
                 bind(
@@ -355,7 +386,7 @@ def analyze_flight_record(run: Execution) -> FlightRecord:
             DecisionRecord(
                 event_id=event.id,
                 sequence=event.sequence,
-                action=str(event.payload.get("rule") or "intent evaluation"),
+                action=str(event.payload.get("rule") or event.payload.get("reason_code") or "intent evaluation"),
                 decision=str(event.payload.get("decision") or event.payload.get("outcome") or "recorded"),
                 outcome=str(event.payload["outcome"]) if event.payload.get("outcome") is not None else None,
                 summary=str(
