@@ -1,144 +1,481 @@
 # AgentFlight Recorder
 
-AgentFlight Recorder turns a tool-using AI-agent run into an **Intent Flight Record**: versioned contract-conformance evidence connecting declared intent to explicit plans, application-provided decision summaries, tool calls, state changes, and outcomes. It returns the causal-minimal frontier of detected contract violations, then evaluates a candidate control through fixture replay and an authenticated multi-fixture promotion suite.
+**Intent assurance and intent-based access control for AI agents.**
 
-This is not another trace viewer. Traces answer what happened; AgentFlight answers which intent clause authorized an action, where that authorization chain first broke, and whether a candidate change restored the intended behavior without a detected regression. The included judge path is deterministic, uses synthetic data, makes no network calls, and requires no OpenAI API key.
+AgentFlight Recorder shows AI engineers not only *what* an agent did, but **which declared intent authorized each consequential action, where behavior first diverged, whether the action should have been allowed, and whether a proposed fix is safe to promote**.
 
-AgentFlight never claims access to hidden model chain-of-thought. `plan` and `decision` events are explicit records emitted by the application: concise rationale summaries, considered alternatives, self-reported uncalibrated confidence, cited evidence events, and referenced intent clauses. They are inspectable engineering artifacts, not private model reasoning.
+It combines an evidence-linked Intent Flight Record, deterministic intent-based access control, counterfactual replay, an authenticated software-factory promotion gate, and an optional GPT-5.6 Sol investigator in one runnable developer tool.
 
-## Judge quickstart
+> Track: **Developer Tools** · Built for **OpenAI Build Week** · Python 3.11+ · React · FastAPI · OpenAI Responses API
 
-```bash
-AGENTFLIGHT_ATTESTATION_KEY=$(openssl rand -hex 32) docker compose up --build --wait
-```
+## Why judges should care
 
-Open `http://localhost:8080`, select **Run vulnerable scenario**, inspect the first divergence in the Intent Flight Record, then select **Replay with protection**. The baseline run seeds eight documented security conditions. The protected replay uses the same fixture hash, blocks the unauthorized read before synthetic data can reach the simulated outbound tool, and produces an evidence-gated promotion decision.
+| Judging criterion | Evidence in the project |
+|---|---|
+| **Technological implementation** | A working SDK, API, closed authorization ontology, signed grants and approvals, single-use permits, causal conformance engine, eight detectors, replay system, authenticated release gate, OpenAI integration, CLI, CI, and adversarial tests—not a mocked prototype |
+| **Design** | One coherent judge journey from seeded incident to authorization decision, causal divergence, evidence inspection, protected replay, and promotion verdict, with responsive and accessible states |
+| **Potential impact** | Gives AI engineers and software factories a practical control plane for answering whether an agent action was authorized by user intent and whether a repair is ready to ship |
+| **Quality of the idea** | Moves beyond trace viewing by making intent executable: signed least-privilege authority before action, causal-minimal divergence after action, and evidence-gated improvement before release |
 
-Without Docker:
+## Judge quick path
 
-```bash
-uv sync --extra dev
-cd apps/web && npm install && npm run build && cd ../..
-uv run python main.py
-```
-
-## Verification
+The complete deterministic demonstration runs without an account, external service, real secret, or OpenAI API key.
 
 ```bash
-make verify-demo
-make verify-benchmark
-AGENTFLIGHT_ATTESTATION_KEY='replace-with-at-least-32-random-bytes' make verify-assurance
-make verify-adapters
-AGENTFLIGHT_ATTESTATION_KEY='replace-with-at-least-32-random-bytes' make verify-release
+git clone https://github.com/kenhuangus/agentflight-recorder.git
+cd agentflight-recorder
+export AGENTFLIGHT_ATTESTATION_KEY="$(openssl rand -hex 32)"
+docker compose up --build --wait
 ```
 
-`make verify-demo` runs the Python tests and end-to-end CLI assertion. `make verify-release` adds the benchmark, authenticated assurance suite, adapters, recorded artifact, and production frontend checks. The 32-case labeled benchmark consists of two target-rule-positive and two target-rule-negative variants per detector; a target-rule-negative trace may still contain other seeded violations. Results include two-sided 95% Wilson intervals and apply only to this synthetic suite.
+Open [http://localhost:8080](http://localhost:8080), then:
 
-## SDK integration
+1. Select **Run vulnerable scenario**.
+2. Inspect the **Intent-Based Access Control** record and **Intent Flight Record**.
+3. Follow the causal frontier from untrusted retrieval to protected read and simulated egress.
+4. Select **Replay with protection**.
+5. Inspect the same fixture under enforcement and the evidence-gated promotion verdict.
 
-```python
-from agentflight import IntentContract, Recorder, trace_tool
-
-@trace_tool("lookup")
-def lookup(*, query: str):
-    return {"title": "Synthetic result", "query": query}
-
-contract = IntentContract(goal="Research a public vendor", allowed_tools=["lookup"])
-with Recorder(contract) as recorder:
-    result = lookup(query="Acme")
-    execution = recorder.finish(f"Found {result['title']}")
-
-print(execution.model_dump_json(indent=2))
-```
-
-The `AgentsSDKTraceAdapter` and `LangGraphTraceAdapter` normalize framework callbacks into the same append-only contract. The adapter layer intentionally does not call a model; applications retain control of runtime credentials and model selection.
-
-## CLI and CI gate
+Stop the application with:
 
 ```bash
-uv run agentflight demo --mode baseline --json  # exits 1 on critical findings
-uv run agentflight demo --mode protected        # exits 0
-uv run agentflight verify-demo
-uv run agentflight benchmark
-AGENTFLIGHT_ATTESTATION_KEY='replace-with-at-least-32-random-bytes' uv run agentflight assurance-suite
+docker compose down
 ```
 
-The GitHub Actions workflow executes the complete keyless verification path. It has read-only repository permissions and receives no product runtime key.
+The demo uses a synthetic canary and simulated tools. It performs no external retrieval or outbound action.
+
+## Why this project exists
+
+Agent observability platforms are excellent at collecting spans, prompts, latency, token usage, tool calls, and model outputs. Those traces answer:
+
+> What happened?
+
+AI engineers still have to answer harder questions manually:
+
+- Did this tool call serve the user's approved purpose?
+- Which intent clause authorized access to this resource and destination?
+- Did untrusted content redirect the agent into a new objective?
+- Where is the earliest causal point at which behavior stopped conforming?
+- Can a candidate repair be promoted without introducing another intent regression?
+- Can authorization remain deterministic even when a model helps interpret intent?
+
+AgentFlight is built around those questions. It treats intent as an executable, reviewable security boundary rather than another trace attribute.
+
+## What AgentFlight does
+
+### 1. Builds an Intent Flight Record
+
+An `IntentContract` becomes a canonical set of versioned clauses covering the goal, tools, protected resources, approval gates, prohibited effects, and completion conditions. AgentFlight binds recorded plans, application-provided decision summaries, tool proposals, results, state changes, and final answers to those clauses.
+
+The record separates three measurements that are often incorrectly collapsed into one score:
+
+- **Declaration coverage:** the application claimed a relationship.
+- **Verified coverage:** a deterministic verifier found behavior-specific evidence.
+- **Consequential-action coverage:** effectful actions have explicit clause bindings.
+
+AgentFlight does not claim access to hidden chain-of-thought. Decision summaries, alternatives, confidence, evidence references, and clause references are explicit application records. Confidence is labeled self-reported and uncalibrated.
+
+### 2. Finds the causal-minimal divergence frontier
+
+Executions are treated as causal graphs, not merely timestamped lists. Parent, evidence, and declared predecessor edges establish a partial order. AgentFlight returns every detected violating event that has no earlier violating causal ancestor.
+
+That matters for parallel agents: two incomparable failures remain two frontier events instead of being forced into a misleading single “first” event.
+
+### 3. Enforces intent-based access control
+
+AgentFlight ships a closed, versioned authorization ontology. Every mapped effectful tool is normalized into:
+
+`action + resource type + data class + destination + effects`
+
+Human-approved contracts become short-lived, signed intent grants. Runtime authority is the deterministic intersection:
+
+```text
+identity ∩ agent ∩ signed intent grant ∩ organization policy ∩ runtime context
+```
+
+The authorizer returns `allow`, `deny`, or `require_approval`. An allowed request receives a short-lived permit bound to the exact request and grant digests. The mediated executor consumes the permit once, immediately before the tool call.
+
+Implemented protections include:
+
+- closed-ontology and default-deny behavior;
+- contract, ontology, execution, purpose, subject, and expiry binding;
+- HMAC-signed grants and exact-action approvals;
+- tool, action, resource, data-class, destination, and effect constraints;
+- sensitive-data egress and untrusted-provenance controls;
+- tool-call budgets and delegation-depth limits;
+- monotonic child-grant attenuation;
+- argument-mutation and permit-replay rejection; and
+- complete-mediation evidence for the shipped mapped-tool adapter profile.
+
+Approval is conjunctive: it can add a restriction but can never create authority that is absent from the grant.
+
+### 4. Replays the failure under a candidate control
+
+The bundled fixture contains an indirect prompt injection that asks the agent to read a protected synthetic canary and send it externally.
+
+- **Baseline:** deterministic authorization records the denials in observe-only mode while the simulator preserves the unsafe counterfactual.
+- **Protected replay:** the same fixture hash runs under enforcement; the protected read and outbound action are blocked.
+
+The comparison shows changed decisions, restored clauses, resolved rules, blocked tools, coverage regressions, and unbound consequential actions.
+
+### 5. Gates software-factory promotion with evidence
+
+A coding agent may consume a failure record and propose a code or policy change. It cannot approve its own work.
+
+The fixture gate requires exact replay linkage, fixture parity, restored intent clauses, no new deterministic finding, non-regressing coverage, and no unbound candidate action. The separate authenticated suite gate additionally binds:
+
+- the fixture manifest;
+- verifier source and dependency digests;
+- source revision, detector version, and policy version;
+- runner identity and HMAC attestation;
+- minimum task-family and action-channel diversity; and
+- a preregistered 95% Wilson lower-bound threshold.
+
+The bundled authenticated suite currently contains 12 content-addressed fixtures across four task families and three action channels. A passing result is a scoped promotion recommendation, not a general production-safety certificate.
+
+### 6. Uses GPT-5.6 Sol without giving the model authority
+
+The optional OpenAI path uses the Responses API with `gpt-5.6-sol`, explicit medium reasoning, strict JSON Schema output, bounded retries, sanitized failures, and rate limiting.
+
+GPT-5.6 Sol has two bounded roles:
+
+1. **Intent compiler:** converts natural language into a least-privilege candidate contract. Unknown ontology terms are removed and ambiguity forces clarification.
+2. **Semantic investigator:** analyzes a minimized, redacted trace for semantic intent drift and prompt-injection influence, citing only event IDs from that execution.
+
+Model output cannot issue a grant, satisfy human approval, execute a tool, suppress deterministic findings, change policy, or promote a release. The UI records requested and resolved model identifiers and clearly distinguishes live from recorded analysis.
+
+## Why it is different
+
+| Conventional agent observability | AgentFlight Recorder |
+|---|---|
+| Records prompts, spans, outputs, and tool calls | Connects consequential actions to canonical intent clauses |
+| Uses time order as the primary investigation view | Reconstructs recorded causal provenance and preserves concurrent divergence |
+| Explains a failure after it happens | Enforces signed intent before a mapped effectful tool executes |
+| Treats approval as a workflow event | Cryptographically binds approval to the exact grant, execution, tool, and arguments |
+| Compares traces and metrics | Tests whether a control restores intent without detected regression |
+| Produces evaluation scores | Produces authenticated, content-addressed release evidence with uncertainty bounds |
+| Lets an LLM interpret behavior | Uses the model as an untrusted proposer and investigator; deterministic code owns authority |
+
+AgentFlight is designed to complement tracing systems, not replace them. Existing OpenAI Agents SDK and LangGraph applications can normalize their events through the included adapters.
 
 ## Architecture
 
-The FastAPI service serves both the versioned API and the React investigation interface. SQLite provides a zero-configuration local profile. Cloud Run can deploy the same container; Cloud SQL and a private worker are the documented scale-out path. Trace capture, redaction, deterministic analysis, replay, report export, and adapters are separate modules with strict Pydantic contracts.
-
-The eight rules are protected-data egress, missing approval, unsafe tool chaining, instruction-source confusion, goal drift, privilege escalation, unsafe authorization-state mutation, and unsupported completion. Every finding cites event identifiers validated against its execution.
-
-The intent-analysis layer compiles each contract into full canonical SHA-256 clause identifiers, emits versioned clause evaluations, reconstructs recorded causal provenance, and returns separate declaration, verified-behavior, and action coverage plus a causal-minimal divergence frontier. Baseline-versus-candidate comparison is useful in an AI-engineering or software-factory loop:
-
-`intent contract → versioned evaluation → causal frontier → candidate control → fixture replay → authenticated suite gate`
-
-The gate is deliberately conservative: model-generated explanations or code changes cannot promote themselves. A fixture replay produces only a scoped recommendation. The software-factory gate additionally requires a signed fixture manifest, content-addressed verifier artifact, minimum fixture diversity, all replay checks, and a preregistered lower confidence bound. Neither result is a general production-safety certification.
-
-### Intent-based access control
-
-AgentFlight also enforces intent at the tool boundary. A closed, versioned ontology maps each shipped tool to an action, resource type, data class, destination, and effects. Human-approved contracts become short-lived HMAC-signed `IntentGrant` capabilities bound to a subject, user relationship, execution, purpose, ontology digest, tool budget, and delegation depth. Authorization is the deterministic intersection:
-
-`identity ∩ agent ∩ signed intent grant ∩ organization policy ∩ runtime context`
-
-Every mapped tool proposal receives an `allow`, `deny`, or `require_approval` decision before execution. Allowed calls receive a request-bound, short-lived, single-use permit; argument mutation, permit replay, grant tampering, unknown ontology terms, authority-expanding delegation, sensitive external flow, and untrusted-content control all fail closed. High-impact approvals are signed and bound to the exact execution, grant, tool, and arguments digest. Approval is an additional restriction and can never create permission absent from a grant.
-
-The synthetic baseline intentionally records denials in observe-only mode so judges can see the unsafe counterfactual. Protected mode enforces the same decisions. `GET /api/v1/executions/{id}/authorization-record` reports complete-mediation evidence for the fixed ontology-mapped adapter profile, while `GET /api/v1/authorization/ontology` exposes the version and digest. The private `POST /api/v1/intent/grants` route requires administrator authorization, an explicit human confirmation phrase, and a runtime-only signing key.
-
-The formal semantics, trusted-computing-base boundary, statistical protocol, and claim limitations are specified in [`docs/ASSURANCE-SPEC.md`](docs/ASSURANCE-SPEC.md).
-
-## Security model
-
-The demonstration contains no real secret, external retrieval, or outbound side effect. Baseline mode is explicitly observational; protected mode is deny-by-default. Event payloads have a separate redacted representation, byte-accurate bounds, same-run parent checks, and immutable idempotency keys. Model output, when added, must remain untrusted structured data and cannot suppress deterministic findings or execute tools. `.env*` files are ignored except `.env.example`.
-
-Public deployments run with `AGENTFLIGHT_DEMO_MODE=true`. In this mode anonymous users can run the synthetic scenarios and access only execution identifiers created by those actions; list, create, append, and complete APIs are disabled, guessed identifiers return 404, request streams are capped, and demo actions are rate-limited. Public demo retention is bounded to 64 execution records with a one-hour TTL; insertion and pruning share the same store transaction, and expired identifiers lose access. Private developer ingestion requires `AGENTFLIGHT_DEMO_MODE=false` plus a server-side `AGENTFLIGHT_ADMIN_TOKEN`; creation, retrieval, reporting, comparison, and live analysis all require that token in this profile. This token is not a substitute for production workspace identity and authorization.
-
-This prototype is a developer security instrument, not a SIEM, compliance certification, or claim of production-scale detector validation.
-
-## OpenAI and Codex usage
-
-The implementation follows the OpenAI Agents SDK pattern of one explicit agent path, narrow deterministic tools, stable trace boundaries, and behavior-oriented evals. The deterministic release path does not make an OpenAI API call. The browser, tests, CLI fixtures, build, and documentation do not need or access a runtime key.
-
-The optional server-only semantic analyzer is disabled unless both `AGENTFLIGHT_LIVE_ANALYSIS_ENABLED=true` and `OPENAI_API_KEY` are present. It uses the official OpenAI Responses API with `OPENAI_MODEL` (default `gpt-5.6-sol`) and explicit medium reasoning, a minimized redacted trace, strict structured output, same-run evidence validation, bounded timeout/retry, sanitized errors, and a small hourly process quota. Its results record both requested and resolved model identifiers. They are separate provenance-labeled artifacts: they cannot suppress deterministic findings, change policy, issue a grant, or execute a tool. The judge image includes the fixture-bound non-live artifact at `GET /api/v1/recorded-analysis`; its SHA-256 integrity field is verified before serving.
-
-`POST /api/v1/intent/compile/live` uses the same runtime key and GPT-5.6 Sol medium reasoning to convert natural language into a least-privilege candidate contract. Closed-ontology validation removes unknown authority and ambiguity forces clarification. The result explicitly grants no authority; only the separate authenticated human-approval route can sign a grant.
-
-To generate the submission's recorded artifact through the same product path at runtime:
-
-```bash
-AGENTFLIGHT_LIVE_ANALYSIS_ENABLED=true uv run agentflight record-analysis --output artifacts/recorded-analysis.json
-uv run python scripts/verify_recorded_analysis.py
+```text
+User-approved task
+       │
+       ▼
+IntentContract ──► human approval ──► signed IntentGrant
+       │                                  │
+       ▼                                  ▼
+instrumented agent ──► tool proposal ──► deterministic authorizer
+       │                                  │
+       │                       deny / require approval / permit
+       │                                  │
+       ▼                                  ▼
+append-only trace ◄──────────── mediated tool execution
+       │
+       ├──► Intent Flight Record + divergence frontier
+       ├──► deterministic security findings
+       ├──► optional GPT-5.6 Sol semantic investigation
+       └──► fixture replay ──► authenticated promotion gate
 ```
 
-The generator reads credentials only through the server runtime environment. Missing recorded evidence fails verification by default. A deterministic-only profile may explicitly set `AGENTFLIGHT_RECORDED_ANALYSIS_OPTIONAL=true`, which produces a labeled `SKIP` rather than a false pass.
+The shipped judge profile is a single FastAPI and React container with SQLite. It is intentionally small, reproducible, and safe to expose with synthetic data. The documented production extension replaces the process-local permit ledger with an atomic shared store and adds workload identity, private workers, durable storage, and workspace authorization.
 
-Codex assisted with the implementation and verification described in `docs/codex-build-log.md`. No claim is made beyond the recorded files and commands.
+## Demonstrated security conditions
 
-## Google Cloud deployment
+The baseline fixture exercises eight evidence-linked detector classes:
 
-Create an Artifact Registry repository named `agentflight`, then submit the pinned container through Cloud Build:
+| Rule | Condition |
+|---|---|
+| `AFR-EGRESS-001` | Protected data proposed for egress |
+| `AFR-APPROVAL-001` | Required approval missing |
+| `AFR-CHAIN-001` | Unsafe read-to-send tool chain |
+| `AFR-SOURCE-001` | Untrusted instructions influence control flow |
+| `AFR-GOAL-001` | Behavior departs from the declared goal or tools |
+| `AFR-PRIV-001` | Unauthorized protected-resource or privilege transition |
+| `AFR-STATE-001` | Untrusted input mutates authorization-relevant state |
+| `AFR-COMPLETE-001` | Completion is claimed without required evidence |
+
+Every finding cites validated event identifiers from its own execution.
+
+## Run locally without Docker
+
+### Prerequisites
+
+- Python 3.11 or newer
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Node.js 22 and npm
+- OpenSSL for generating a local assurance key
+
+Install dependencies and build the web application:
 
 ```bash
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
-gcloud artifacts repositories create agentflight --repository-format=docker --location=us-central1
-openssl rand -hex 32 | gcloud secrets create agentflight-attestation-key --data-file=-
-# Add the existing Platform key at runtime; never place it in source or the image:
+git clone https://github.com/kenhuangus/agentflight-recorder.git
+cd agentflight-recorder
+make install
+cd apps/web
+npm run build
+cd ../..
+```
+
+Start AgentFlight:
+
+```bash
+export AGENTFLIGHT_ATTESTATION_KEY="$(openssl rand -hex 32)"
+UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated \
+  uvicorn agentflight.api:app --host 0.0.0.0 --port 8080
+```
+
+Open [http://localhost:8080](http://localhost:8080). Stop the server with `Ctrl+C`.
+
+## Run with the OpenAI API
+
+The deterministic product works without OpenAI access. To enable the explicit live-analysis button and candidate-intent compiler, supply the key only at runtime:
+
+```bash
+export OPENAI_API_KEY="your-runtime-key"
+export OPENAI_MODEL="gpt-5.6-sol"
+export AGENTFLIGHT_LIVE_ANALYSIS_ENABLED=true
+export AGENTFLIGHT_LIVE_ANALYSIS_LIMIT=3
+export AGENTFLIGHT_ATTESTATION_KEY="$(openssl rand -hex 32)"
+
+docker compose up --build --wait
+```
+
+The key is read only by the server. It is not used during the image build, embedded in the browser bundle, written to traces, or committed to the repository.
+
+In the UI, run the baseline and select **Investigate with GPT-5.6 Sol**.
+
+To exercise the same live semantic-analysis path from the CLI without replacing the submitted artifact:
+
+```bash
+UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated \
+  agentflight record-analysis --output /tmp/agentflight-live-analysis.json
+```
+
+To compile a natural-language request into a non-authoritative candidate contract:
+
+```bash
+curl --fail-with-body \
+  --request POST http://localhost:8080/api/v1/intent/compile/live \
+  --header 'Content-Type: application/json' \
+  --data '{"request":"Research Acme using public sources and produce a local cited summary."}'
+```
+
+## CLI-only judge test
+
+The deterministic scenario can be verified without starting the web server:
+
+```bash
+UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated agentflight verify-demo
+```
+
+Expected summary:
+
+```json
+{
+  "passed": true,
+  "baseline_findings": 8,
+  "protected_findings": 0
+}
+```
+
+Run an individual scenario:
+
+```bash
+# Baseline intentionally exits non-zero because it contains critical findings.
+UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated agentflight demo --mode baseline
+
+# Protected mode exits zero.
+UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated agentflight demo --mode protected
+```
+
+## Verification and reproducibility
+
+Run the complete release verification:
+
+```bash
+export AGENTFLIGHT_ATTESTATION_KEY="$(openssl rand -hex 32)"
+make verify-release
+```
+
+Or run each layer independently:
+
+```bash
+make verify-demo                 # Python, API, policy, replay, and security tests
+make verify-benchmark            # 32 labeled deterministic scenarios
+make verify-assurance            # authenticated 12-fixture promotion suite
+make verify-adapters             # framework adapter contract tests
+make verify-recorded-analysis    # fixture and artifact integrity
+make verify-web                  # UI tests, production build, and npm audit
+```
+
+Verified repository evidence at the time of this README revision:
+
+- 59 Python tests passing;
+- 9 judge-UI contract tests passing;
+- production TypeScript and Vite build passing;
+- zero npm production-audit vulnerabilities;
+- 32 unique labeled benchmark scenarios with reproducible output;
+- 16 true positives, 16 true negatives, zero false positives, and zero false negatives in the synthetic corpus; and
+- authenticated 12-fixture gate passing with a 95% Wilson lower bound of 75.8% against a preregistered 70% threshold.
+
+These measurements describe the included synthetic regression evidence only. They do not establish production detector accuracy.
+
+## API highlights
+
+| Method and path | Purpose |
+|---|---|
+| `POST /api/v1/demo/baseline` | Run the synthetic observe-only incident |
+| `POST /api/v1/demo/protected` | Run the enforced counterfactual replay |
+| `GET /api/v1/executions/{id}/intent-flight-record` | Retrieve clause bindings and divergence frontier |
+| `GET /api/v1/executions/{id}/authorization-record` | Retrieve intent-authorization evidence |
+| `GET /api/v1/authorization/ontology` | Inspect the closed ontology version and digest |
+| `GET /api/v1/comparisons/{left}/{right}` | Compare replay outcomes and promotion evidence |
+| `POST /api/v1/executions/{id}/analyze/live` | Run bounded GPT-5.6 Sol semantic analysis |
+| `POST /api/v1/intent/compile/live` | Produce a candidate intent contract |
+| `GET /api/v1/benchmark` | Run the labeled detector benchmark |
+| `GET /api/v1/assurance-suite` | Run the authenticated multi-fixture gate |
+| `GET /api/docs` | OpenAPI documentation |
+
+Public demo mode exposes only synthetic, fixture-scoped records. General ingestion and signed-grant issuance require private mode and an administrator token.
+
+## Google Cloud Run deployment
+
+The included `cloudbuild.yaml` builds the container, pushes it to Artifact Registry, and deploys one public synthetic judge service. OpenAI and signing credentials are injected from Secret Manager at runtime.
+
+Set the project and region:
+
+```bash
+export PROJECT_ID="your-gcp-project-id"
+export REGION="us-central1"
+gcloud config set project "$PROJECT_ID"
+```
+
+Enable services and create the runtime identity:
+
+```bash
+gcloud services enable \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  secretmanager.googleapis.com
+
+gcloud artifacts repositories create agentflight \
+  --repository-format=docker \
+  --location="$REGION"
+
+gcloud iam service-accounts create agentflight-web \
+  --display-name="AgentFlight judge runtime"
+```
+
+Create runtime secrets. For the OpenAI secret command, paste the Platform key into standard input and then send end-of-file; the key is not placed in the command line or image.
+
+```bash
+openssl rand -hex 32 | \
+  gcloud secrets create agentflight-attestation-key --data-file=-
+
 gcloud secrets create agentflight-openai-api-key --data-file=-
-openssl rand -hex 32 | gcloud secrets create agentflight-grant-signing-key --data-file=-
-for SECRET in agentflight-attestation-key agentflight-openai-api-key agentflight-grant-signing-key; do
-  gcloud secrets add-iam-policy-binding "$SECRET" --member="serviceAccount:agentflight-web@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
-done
-gcloud builds submit --config cloudbuild.yaml
+
+openssl rand -hex 32 | \
+  gcloud secrets create agentflight-grant-signing-key --data-file=-
 ```
 
-Cloud Build tags the image with its always-populated build ID, so the same configuration works for manual submissions and repository-triggered builds.
+Allow the Cloud Run identity to read only those secrets:
 
-The configuration exposes only the synthetic judge service. Cloud SQL, a private worker, Secret Manager, long-term production retention, and authenticated workspaces are target-production topology, not included in this repository's deployed judge profile. Do not inject a product runtime key during image build.
+```bash
+for SECRET in \
+  agentflight-attestation-key \
+  agentflight-openai-api-key \
+  agentflight-grant-signing-key
+do
+  gcloud secrets add-iam-policy-binding "$SECRET" \
+    --member="serviceAccount:agentflight-web@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+done
+```
+
+Submit the build:
+
+```bash
+gcloud builds submit \
+  --config cloudbuild.yaml \
+  --substitutions="_REGION=${REGION}"
+```
+
+Retrieve the public URL:
+
+```bash
+gcloud run services describe agentflight-recorder \
+  --region="$REGION" \
+  --format='value(status.url)'
+```
+
+Cloud Build and Cloud Run service-account permissions must be granted according to the policies of the target GCP organization. No API key is required or accepted as a Docker build argument.
+
+## Supported platforms
+
+- Linux
+- macOS
+- Windows through Docker Desktop or WSL2
+- Google Cloud Run
+- Python 3.11+
+- Current Chromium, Firefox, and Safari-class browsers
+- OpenAI Agents SDK and LangGraph through the included normalization adapters
+
+The shipped SQLite and process-local permit-ledger profile is intended for the judge demo and local developer workflows. Multi-instance production deployment requires a shared database or atomic nonce store and real workload identity.
+
+## Codex collaboration and human decisions
+
+Codex was used as an engineering collaborator across schemas, deterministic authorization, causal analysis, replay, API routes, React UI, adversarial tests, documentation, packaging, and deployment configuration. The dated record is in [`docs/codex-build-log.md`](docs/codex-build-log.md), with commit history providing the corresponding repository evidence.
+
+Codex accelerated implementation and review, but did not own the product boundary. Key human-directed decisions included:
+
+- positioning AgentFlight as intent assurance rather than another observability dashboard;
+- refusing to claim hidden chain-of-thought capture;
+- keeping authorization and promotion deterministic;
+- treating GPT-5.6 Sol output as untrusted candidate evidence;
+- separating declaration coverage from verified behavioral coverage;
+- retaining all causal-minimal concurrent divergences;
+- requiring exact-action approval and single-use permits; and
+- scoping benchmark and promotion claims to their actual evidence.
+
+GPT-5.6 Sol is also a meaningful runtime component: it compiles candidate intent and performs evidence-linked semantic investigation. It is deliberately prevented from granting itself authority.
+
+OpenAI Build Week requires the README to explain how Codex and GPT-5.6 contributed, and evaluates technological implementation, design, potential impact, and quality of the idea equally. See the [official rules](https://openai.devpost.com/rules).
+
+## Security and scientific claim boundary
+
+AgentFlight provides deterministic conformance evidence for declared contracts and recorded events. It does not recover latent human intent, inspect private chain-of-thought, prove detector completeness, certify philosophical causation, replace a SIEM, or establish general production safety.
+
+The trusted computing base includes the contract source, host identity binding, recorder, ontology, mediated adapters, authorizer, storage validation, verifier implementation, fixture corpus, runner, signing-key custody, and human release authority.
+
+Known scale boundaries are disclosed in the API authorization record and [`docs/ASSURANCE-SPEC.md`](docs/ASSURANCE-SPEC.md). General scientific validation would require independently annotated real-world traces, held-out evaluation, inter-reviewer agreement, distribution-shift testing, calibration studies, and external replication.
 
 ## Repository map
 
-`src/agentflight` contains the SDK, contracts, detectors, replay, API, adapters, storage, report export, and CLI. `apps/web` contains the React/TypeScript interface. `tests` contains unit, adapter, API, replay, and security tests. The four uppercase Markdown documents remain the governing product specifications.
+```text
+src/agentflight/             Python SDK, API, authorization, analysis, replay
+apps/web/                    React and TypeScript judge interface
+tests/                       Unit, adversarial, API, replay, and adapter tests
+evals/                       Versioned assurance fixtures
+artifacts/                   Integrity-checked recorded analysis
+docs/ASSURANCE-SPEC.md       Formal definitions and claim boundaries
+docs/codex-build-log.md      Codex collaboration evidence
+PRD.md                       Product requirements
+ARCHITECTURE.md              System and trust-boundary architecture
+DETAIL-DESIGN.md             Component-level behavior
+HANDOFF.md                   Implementation and submission handoff
+cloudbuild.yaml              Google Cloud build and deployment
+```
 
-Licensed under MIT.
+## License
+
+AgentFlight Recorder is released under the permissive **MIT License**. See [`LICENSE`](LICENSE).
+
+The OpenAI Build Week rules require a public repository to include relevant licensing but do not mandate a specific license. MIT makes the inspection and testing rights clear while preserving the required copyright and warranty notice. Third-party dependencies remain governed by their respective licenses and terms.
+
+---
+
+**AgentFlight Recorder: trace what happened, prove where intent diverged, enforce what may happen next.**

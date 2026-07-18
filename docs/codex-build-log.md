@@ -1,5 +1,13 @@
 # Codex build log
 
+## Judge-first repository narrative
+
+Request: replace the inherited README with a self-contained, winning-oriented explanation for judges that clearly states what AgentFlight is, why it matters, how it works, how Codex and GPT-5.6 contributed, which license applies, and exactly how to run and verify the project.
+
+Changes: rewrote `README.md` around the four equally weighted judging criteria; added a five-step judge path, intent-assurance problem statement, feature and novelty narrative, architecture, security-condition register, deterministic and OpenAI runtime instructions, CLI output, release verification, API map, Google Cloud Run deployment, supported platforms, Codex/human decision boundary, scientific limitations, repository map, official-rules link, and MIT license rationale. Updated Docker Compose to pass the optional OpenAI model, runtime key, live-analysis gate, rate limit, and grant-signing key exclusively at container runtime.
+
+Verification: confirmed the official rules require relevant repository licensing but do not mandate a specific license; retained the repository's MIT license and linked it directly. All 59 Python tests passed, the deterministic CLI verification returned eight baseline findings and zero protected findings, all nine judge-UI contract tests passed, the TypeScript/Vite production build passed, Markdown whitespace checks passed, and every relative README link resolves to a repository file. Docker is not installed in this workspace, so no local container-build result is claimed.
+
 ## Assurance-centered judge UX
 
 Request: make the mathematical and scientific assurance improvements visible through a professional, attractive judge experience.
