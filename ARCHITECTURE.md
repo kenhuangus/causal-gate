@@ -1,4 +1,4 @@
-# AgentFlight Recorder — Architecture
+# CausalGate — Architecture
 
 ## 1. Architectural approach
 
@@ -28,9 +28,9 @@ The recorder API validates events, enforces tenant-free local ownership, assigns
 
 The intent service converts user instructions and developer policy into an `IntentContract`. A deterministic validator checks the model-produced contract before it becomes active.
 
-The analysis engine runs deterministic rules first, then sends a minimized trace projection to GPT-5.6. It validates model output, verifies every cited event identifier, merges duplicate findings, and records analysis provenance.
+The analysis engine runs deterministic rules first, then sends a minimized trace projection to GPT-5.6 Sol. It validates model output, verifies every cited event identifier, merges duplicate findings, and records analysis provenance.
 
-The conformance engine compiles a contract into canonical full-digest clauses, evaluates each binding with a versioned verifier, reconstructs the event partial order, and binds consequential actions to clauses that authorize or constrain them. It emits an `IntentFlightRecord` containing explicit decision records, separate coverage measures, unbound actions, and the causal-minimal divergence frontier. It does not infer private chain-of-thought; it analyzes only recorded application events and contract fields.
+The conformance engine compiles a contract into canonical full-digest clauses, evaluates each binding with a versioned verifier, reconstructs the event partial order, and binds consequential actions to clauses that authorize or constrain them. It emits an `IntentCausalRecord` containing explicit decision records, separate coverage measures, unbound actions, and the causal-minimal divergence frontier. It does not infer private chain-of-thought; it analyzes only recorded application events and contract fields.
 
 The policy engine evaluates proposed tool calls before execution. Baseline mode records violations but permits seeded demo behavior. Protected mode denies violations or requests approval. This behavior is explicit in the user interface to avoid presenting monitoring as enforcement.
 
@@ -38,7 +38,7 @@ The intent authorizer is the effectful-tool reference monitor for the shipped pr
 
 The replay runner loads immutable fixtures, replaces side-effecting tools with simulators, and executes the same task and retrieved content under a selected policy version. It links the new execution to its source execution.
 
-The dashboard provides run selection, an Intent Flight Record, a first-divergence view, intent-contract display, finding details, causal event inspection, and baseline-versus-protected comparison with a promotion gate.
+The dashboard provides run selection, an Intent Causal Record, a first-divergence view, intent-contract display, finding details, causal event inspection, and baseline-versus-protected comparison with a promotion gate.
 
 ## 4. Runtime flow
 
@@ -54,17 +54,17 @@ sequenceDiagram
     Agent->>Policy: Typed, ontology-normalized proposal
     Policy-->>Agent: Deny, require signed approval, or single-use permit
     Recorder->>Analyzer: Completed trace
-    Analyzer->>Analyzer: Rules and GPT-5.6 review
+    Analyzer->>Analyzer: Rules and GPT-5.6 Sol review
     Analyzer-->>User: Evidence-linked findings
 ```
 
 ## 5. Data model
 
-`Execution` contains identity, policy mode, contract, events, findings, fixture digest, and replay link. `Event` contains recorder sequence, logical clock, emitter, parent, causal predecessors, validated evidence, payload, redacted payload, provenance, and sensitivity. `IntentGrant` binds the approved contract and ontology digests to identity, purpose, scope, limits, expiry, and signature. `AuthorizationRequest` carries normalized semantics and an arguments digest. `ApprovalArtifact` and `ExecutionPermit` are signed exact-action capabilities; permits are short-lived and single-use. `AuthorizationRecord` summarizes policy evidence and complete mediation. `IntentClause` has a canonical identifier and criticality. `ClauseEvaluation` records status, verifier identity/version, and evidence. `IntentFlightRecord` contains the divergence frontier, separate coverage measures, explicit decisions, causal-provenance events, and unbound actions. `PromotionGate` is fixture-scoped. `SuitePromotionGate` adds authenticated provenance, artifact and fixture digests, diversity checks, and a Wilson pass interval.
+`Execution` contains identity, policy mode, contract, events, findings, fixture digest, and replay link. `Event` contains recorder sequence, logical clock, emitter, parent, causal predecessors, validated evidence, payload, redacted payload, provenance, and sensitivity. `IntentGrant` binds the approved contract and ontology digests to identity, purpose, scope, limits, expiry, and signature. `AuthorizationRequest` carries normalized semantics and an arguments digest. `ApprovalArtifact` and `ExecutionPermit` are signed exact-action capabilities; permits are short-lived and single-use. `AuthorizationRecord` summarizes policy evidence and complete mediation. `IntentClause` has a canonical identifier and criticality. `ClauseEvaluation` records status, verifier identity/version, and evidence. `IntentCausalRecord` contains the divergence frontier, separate coverage measures, explicit decisions, causal-provenance events, and unbound actions. `PromotionGate` is fixture-scoped. `SuitePromotionGate` adds authenticated provenance, artifact and fixture digests, diversity checks, and a Wilson pass interval.
 
 ## 6. API boundaries
 
-The shipped API exposes health, the synthetic baseline/protected demo and reset, fixture-scoped execution retrieval, the Intent Flight Record, authorization record, ontology metadata, report export, deterministic comparison with a promotion gate, benchmark output, the verified recorded-analysis artifact, opt-in GPT-5.6 Sol analysis, and live candidate-intent compilation. In private ingestion mode it additionally exposes create, append, complete, list, and explicit human-confirmed signed-grant issuance endpoints behind an administrator token; event ingestion accepts idempotency keys. Job queues, finding assignment, and asynchronous workers are target-production extensions, not shipped endpoints.
+The shipped API exposes health, the synthetic baseline/protected demo and reset, fixture-scoped execution retrieval, the Intent Causal Record, authorization record, ontology metadata, report export, deterministic comparison with a promotion gate, benchmark output, the verified recorded-analysis artifact, opt-in GPT-5.6 Sol analysis, and live candidate-intent compilation. In private ingestion mode it additionally exposes create, append, complete, list, and explicit human-confirmed signed-grant issuance endpoints behind an administrator token; event ingestion accepts idempotency keys. Job queues, finding assignment, and asynchronous workers are target-production extensions, not shipped endpoints.
 
 ## 6.1 Evidence-gated improvement loop
 
@@ -85,7 +85,7 @@ In a recursive AI-engineering loop, a coding agent may consume the failure recor
 
 The shipped Google Cloud configuration packages the React client and FastAPI API as one public Cloud Run synthetic judge service so judges receive one stable HTTPS URL and no cross-origin setup. Cloud SQL for PostgreSQL, Cloud Tasks plus a separate authenticated Cloud Run worker, Cloud Storage, Secret Manager, and a Cloud Run benchmark job are target-production topology only; their provisioning and workers are not shipped here. Artifact Registry stores the judge image, and Cloud Logging should record structured operational events without trace payloads or secrets.
 
-The shipped judge service allows unauthenticated invocation and exposes only synthetic fixtures. Its environment configures demo mode and can enable live analysis only through a server-side secret. The target-production worker, database, bucket, queue, and secrets would remain private and colocated by region; that design is documented but not deployed by `cloudbuild.yaml`. Secrets are never placed in the image or browser bundle. Docker Compose remains the complete local stack, while a SQLite single-process profile supports the quickstart and CI fixture execution.
+The shipped judge service allows unauthenticated invocation and exposes only synthetic fixtures. Its environment enables the live-analysis route but contains no shared OpenAI key. A judge may explicitly send a restricted project key for one analysis request; the backend uses it in request scope and does not persist it. Self-hosted users can instead configure `OPENAI_API_KEY` in the server environment. The target-production worker, database, bucket, queue, and tenant vault remain private and colocated by region; that design is documented in `docs/SAAS-BYOK.md` but is not deployed by `cloudbuild.yaml`. Secrets are never placed in the image or browser bundle.
 
 ## 8. Trust boundaries and controls
 
@@ -99,13 +99,13 @@ Every event write has an idempotency key. Analysis records its prompt version, m
 
 The shipped implementation uses Python 3.12, FastAPI, Pydantic, SQLite, React, TypeScript, and Pytest. The target hosted platform adds Cloud Run, Cloud Tasks, Cloud SQL for PostgreSQL, Cloud Storage, Artifact Registry, Secret Manager, and Cloud Logging. The official OpenAI SDK invokes GPT-5.6 Sol with explicit medium reasoning and strict structured output when Platform access is configured. Docker Compose supplies the local judge path, and the CLI runs benchmark fixtures without the web stack.
 
-## 11. Codex and GPT-5.6 responsibility boundary
+## 11. Codex and GPT-5.6 Sol responsibility boundary
 
-Codex is part of the engineering workflow: it helps implement schemas, adapters, detectors, replay fixtures, API routes, user-interface components, tests, documentation, and deployment scripts. Its contribution is evidenced by the primary session identifier, build log, commits, tests, and human review notes. GPT-5.6 is part of the running product only where semantic interpretation is required: constructing a constrained intent contract and assessing intent divergence from a minimized trace. Deterministic code controls event validity, evidence existence, policy enforcement, replay isolation, and final rule outcomes. Neither technology is described as performing work that is actually provided by fixtures or hand-authored rules.
+Codex is part of the engineering workflow: it helps implement schemas, adapters, detectors, replay fixtures, API routes, user-interface components, tests, documentation, and deployment scripts. Its contribution is evidenced by the primary session identifier, build log, commits, tests, and human review notes. GPT-5.6 Sol is an optional running-product component for compiling a candidate intent contract and assessing semantic intent divergence from a minimized redacted trace. Deterministic code controls contract validation, grant issuance, event validity, evidence existence, policy enforcement, replay isolation, and final rule outcomes.
 
 ## 12. Judge-ready execution profile
 
-The preferred judge path is a hosted read-only demo with a reset button and preloaded baseline and protected fixtures. The fallback is one `docker compose up` command followed by a browser URL, with a preflight command that reports missing configuration. Demo mode must show useful deterministic findings when no OpenAI key is available; a recorded, clearly labeled GPT-5.6 analysis may be provided for inspection, while live semantic analysis requires a user-supplied key. No test credential shall be committed to the repository.
+The preferred judge path is a hosted read-only demo with a reset button and preloaded baseline and protected fixtures. The fallback is one `docker compose up` command followed by a browser URL. Demo mode shows the complete deterministic journey without an OpenAI key; a recorded, clearly labeled legacy GPT-5.6 artifact is available for provenance, while live GPT-5.6 Sol analysis requires a user-supplied key. No test credential is committed.
 
 ## 13. Developer-experience architecture
 
@@ -121,7 +121,7 @@ Adapters translate framework events into the stable recorder schema. Detector pl
 
 ## 15. Model-access modes
 
-`deterministic` mode is the default judge mode and performs capture, rules, policy, replay, comparison, and export without an API key. `recorded-analysis` mode additionally displays the submitted GPT-5.6 result associated with an exact fixture hash and labels its generation timestamp and non-live status. `live-analysis` mode appears only when server-side configuration confirms a Platform key; it performs the same schema and evidence validation and never exposes the key to the browser or demo agent. The selected mode is visible on every analyzed run.
+`deterministic` mode is the default judge mode and performs capture, rules, policy, replay, comparison, and export without an API key. `recorded-analysis` mode displays the historical submitted GPT-5.6 result associated with an exact fixture hash and labels its non-live status. `live-analysis` is an explicit BYOK action: a hosted judge supplies a restricted project key for one same-origin HTTPS request, or a self-hosted operator configures the key server-side. The key is never persisted or returned, and model output remains non-authoritative.
 
 ## 16. Release topology and scaling boundary
 

@@ -2,9 +2,9 @@ import sqlite3
 
 from fastapi.testclient import TestClient
 
-from agentflight.api import create_app
-from agentflight.storage import TraceStore
-from agentflight.demo import FIXTURE
+from causalgate.api import create_app
+from causalgate.storage import TraceStore
+from causalgate.demo import FIXTURE
 
 
 def client():
@@ -20,31 +20,31 @@ def test_health_and_demo_journey():
     assert comparison.status_code == 200
     assert len(comparison.json()["resolved_rules"]) == 8
     report = c.get(f"/api/v1/executions/{baseline['id']}/report")
-    assert "AFR-EGRESS-001" in report.text
-    flight_record = c.get(f"/api/v1/executions/{baseline['id']}/intent-flight-record")
-    assert flight_record.status_code == 200
-    assert flight_record.json()["first_divergence"]["sequence"] == 5
-    assert flight_record.json()["plan_event_ids"]
-    assert flight_record.json()["decision_records"]
-    assert flight_record.json()["causal_chain_event_ids"]
+    assert "CG-EGRESS-001" in report.text
+    causal_record = c.get(f"/api/v1/executions/{baseline['id']}/intent-causal-record")
+    assert causal_record.status_code == 200
+    assert causal_record.json()["first_divergence"]["sequence"] == 5
+    assert causal_record.json()["plan_event_ids"]
+    assert causal_record.json()["decision_records"]
+    assert causal_record.json()["causal_chain_event_ids"]
     assert comparison.json()["promotion_gate"]["verdict"] == "promote"
     authorization = c.get(f"/api/v1/executions/{baseline['id']}/authorization-record")
     assert authorization.status_code == 200
     assert authorization.json()["complete_mediation"] is True
     assert authorization.json()["denied"] == 2
     ontology = c.get("/api/v1/authorization/ontology").json()
-    assert ontology["version"] == "agentflight-ontology/1.0"
+    assert ontology["version"] == "causalgate-ontology/1.0"
     assert ontology["digest"].startswith("sha256:")
 
 
 def test_missing_execution_is_404():
     assert client().get("/api/v1/executions/not-found").status_code == 404
-    assert client().get("/api/v1/executions/not-found/flight-record").status_code == 404
-    assert client().get("/api/v1/executions/not-found/intent-flight-record").status_code == 404
+    assert client().get("/api/v1/executions/not-found/causal-record").status_code == 404
+    assert client().get("/api/v1/executions/not-found/intent-causal-record").status_code == 404
 
 
 def test_live_analysis_disabled_fails_safely(monkeypatch):
-    monkeypatch.setenv("AGENTFLIGHT_LIVE_ANALYSIS_ENABLED", "false")
+    monkeypatch.setenv("CAUSALGATE_LIVE_ANALYSIS_ENABLED", "false")
     c = client()
     run = c.post("/api/v1/demo/baseline").json()
     response = c.post(f"/api/v1/executions/{run['id']}/analyze/live")
@@ -56,10 +56,32 @@ def test_live_analysis_disabled_fails_safely(monkeypatch):
     assert "disabled" in compiled.json()["detail"]
 
 
+def test_public_live_analysis_requires_and_forwards_ephemeral_byok(monkeypatch):
+    monkeypatch.setenv("CAUSALGATE_LIVE_ANALYSIS_ENABLED", "true")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    received = []
+
+    def fake_analysis(run, *, api_key=None):
+        received.append(api_key)
+        from causalgate.live_analysis import AnalysisUnavailable
+        raise AnalysisUnavailable("test boundary reached")
+
+    monkeypatch.setattr("causalgate.api.analyze_live", fake_analysis)
+    c = client()
+    assert c.get("/health").json()["live_analysis"] == "byok_required"
+    run = c.post("/api/v1/demo/baseline").json()
+    response = c.post(
+        f"/api/v1/executions/{run['id']}/analyze/live",
+        headers={"X-OpenAI-API-Key": "synthetic-ephemeral-key-at-least-32-bytes"},
+    )
+    assert response.status_code == 503
+    assert received == ["synthetic-ephemeral-key-at-least-32-bytes"]
+
+
 def test_grant_issuance_is_private_explicit_and_runtime_signed(monkeypatch):
-    monkeypatch.setenv("AGENTFLIGHT_DEMO_MODE", "false")
-    monkeypatch.setenv("AGENTFLIGHT_ADMIN_TOKEN", "admin-test-token")
-    monkeypatch.setenv("AGENTFLIGHT_GRANT_SIGNING_KEY", "runtime-grant-signing-key-at-least-32-bytes")
+    monkeypatch.setenv("CAUSALGATE_DEMO_MODE", "false")
+    monkeypatch.setenv("CAUSALGATE_ADMIN_TOKEN", "admin-test-token")
+    monkeypatch.setenv("CAUSALGATE_GRANT_SIGNING_KEY", "runtime-grant-signing-key-at-least-32-bytes")
     body = {
         "execution_id": "run_private",
         "approver": "user:owner",
@@ -77,7 +99,7 @@ def test_grant_issuance_is_private_explicit_and_runtime_signed(monkeypatch):
     }
     c = client()
     assert c.post("/api/v1/intent/grants", json=body).status_code == 401
-    response = c.post("/api/v1/intent/grants", json=body, headers={"X-AgentFlight-Admin": "admin-test-token"})
+    response = c.post("/api/v1/intent/grants", json=body, headers={"X-CausalGate-Admin": "admin-test-token"})
     assert response.status_code == 201
     assert response.json()["execution_id"] == "run_private"
     assert response.json()["signature"]
@@ -114,7 +136,7 @@ def test_public_demo_quota_prunes_records_and_access_ids():
 
 def test_public_demo_ttl_expires_access_and_storage(monkeypatch):
     now = 1_000.0
-    monkeypatch.setattr("agentflight.api.time.time", lambda: now)
+    monkeypatch.setattr("causalgate.api.time.time", lambda: now)
     store = TraceStore(":memory:")
     app = create_app(store, demo_ttl_seconds=10)
     c = TestClient(app)
@@ -146,9 +168,9 @@ def test_recorded_analysis_is_available_and_validated_in_judge_profile():
 
 
 def test_assurance_suite_requires_runtime_attestation_and_returns_scoped_verdict(monkeypatch):
-    monkeypatch.delenv("AGENTFLIGHT_ATTESTATION_KEY", raising=False)
+    monkeypatch.delenv("CAUSALGATE_ATTESTATION_KEY", raising=False)
     assert client().get("/api/v1/assurance-suite").status_code == 503
-    monkeypatch.setenv("AGENTFLIGHT_ATTESTATION_KEY", "runtime-only-test-key-with-at-least-32-bytes")
+    monkeypatch.setenv("CAUSALGATE_ATTESTATION_KEY", "runtime-only-test-key-with-at-least-32-bytes")
     response = client().get("/api/v1/assurance-suite")
     assert response.status_code == 200
     body = response.json()

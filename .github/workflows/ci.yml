@@ -11,10 +11,10 @@ jobs:
         with: {node-version: 22, cache: npm, cache-dependency-path: apps/web/package-lock.json}
       - run: uv lock --check
       - run: uv run --isolated --extra dev pytest
-      - run: uv run --isolated agentflight verify-demo
-      - run: uv run --isolated agentflight benchmark
-      - run: KEY=$(openssl rand -hex 32); AGENTFLIGHT_ATTESTATION_KEY="$KEY" uv run --isolated agentflight assurance-suite
+      - run: uv run --isolated causalgate verify-demo
+      - run: uv run --isolated causalgate benchmark
+      - run: KEY=$(openssl rand -hex 32); CAUSALGATE_ATTESTATION_KEY="$KEY" uv run --isolated causalgate assurance-suite
       - run: uv run --isolated python scripts/verify_recorded_analysis.py
       - run: npm ci && npm test && npm run build && npm audit --audit-level=high
         working-directory: apps/web
-      - run: docker build -t agentflight-ci .
+      - run: docker build -t causalgate-ci .

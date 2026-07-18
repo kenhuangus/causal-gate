@@ -5,7 +5,7 @@ import json
 
 from .authorization import IntentAuthorizer, build_request, decision_event_payload, issue_grant
 from .detectors import analyze
-from .flight_record import analyze_flight_record, intent_clauses
+from .causal_record import analyze_causal_record, intent_clauses
 from .models import (
     Comparison,
     EventType,
@@ -25,7 +25,7 @@ FIXTURE = {
     "canary": "AFR_SYNTHETIC_CANARY_7F3A",
 }
 FIXTURE_HASH = hashlib.sha256(json.dumps(FIXTURE, sort_keys=True).encode()).hexdigest()[:16]
-DEMO_GRANT_KEY = "agentflight-synthetic-grant-key-32-bytes-minimum"
+DEMO_GRANT_KEY = "causalgate-synthetic-grant-key-32-bytes-minimum"
 
 
 def intent() -> IntentContract:
@@ -59,7 +59,7 @@ def run_demo(mode: PolicyMode | str = PolicyMode.BASELINE) -> Execution:
         recorder.record(
             EventType.POLICY_DECISION, "intent-authorizer",
             decision_event_payload(retrieve_decision), parent_id=retrieve_proposal.id,
-            provenance="agentflight:authorization",
+            provenance="causalgate:authorization",
         )
         document = authorizer.execute(retrieve_decision, lambda: FIXTURE["document"])
         retrieved = recorder.record(
@@ -126,7 +126,7 @@ def run_demo(mode: PolicyMode | str = PolicyMode.BASELINE) -> Execution:
         recorder.record(
             EventType.POLICY_DECISION, "intent-authorizer",
             decision_event_payload(authorization, observe_only=mode == PolicyMode.BASELINE),
-            parent_id=read.id, provenance="agentflight:authorization",
+            parent_id=read.id, provenance="causalgate:authorization",
         )
         decision_event = recorder.record(
             EventType.DECISION,
@@ -169,7 +169,7 @@ def run_demo(mode: PolicyMode | str = PolicyMode.BASELINE) -> Execution:
             recorder.record(
                 EventType.POLICY_DECISION, "intent-authorizer",
                 decision_event_payload(send_decision, observe_only=True), parent_id=send.id,
-                provenance="agentflight:authorization", sensitivity=["protected"],
+                provenance="causalgate:authorization", sensitivity=["protected"],
             )
             delivered = recorder.record(EventType.TOOL_RESULT, "send_message", {"result": "simulated delivery only"}, parent_id=send.id)
             run = recorder.finish("Vendor reviewed and message sent.", parent_id=delivered.id)
@@ -198,7 +198,7 @@ def run_demo(mode: PolicyMode | str = PolicyMode.BASELINE) -> Execution:
             recorder.record(
                 EventType.POLICY_DECISION, "intent-authorizer",
                 decision_event_payload(send_decision), parent_id=prevented_send.id,
-                provenance="agentflight:authorization", sensitivity=["protected"],
+                provenance="causalgate:authorization", sensitivity=["protected"],
             )
             run = recorder.finish(
                 "Blocked an unauthorized request originating in retrieved content.",
@@ -225,7 +225,7 @@ def compare(left: Execution, right: Execution) -> Comparison:
     decisions = [{"step": str(index + 1), "from": str(l.payload.get("decision")), "to": str(r.payload.get("decision"))}
                  for index, (l, r) in enumerate(zip(left_decisions, right_decisions)) if l.payload.get("decision") != r.payload.get("decision")]
     blocked = sorted({str(e.payload.get("tool")) for e in right.events if e.type == EventType.TOOL_PROPOSAL and e.payload.get("blocked")})
-    left_record, right_record = analyze_flight_record(left), analyze_flight_record(right)
+    left_record, right_record = analyze_causal_record(left), analyze_causal_record(right)
     checks = [
         PromotionCheck(
             name="fixture_parity",

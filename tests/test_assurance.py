@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from agentflight.assurance import (
+from causalgate.assurance import (
     attest_provenance,
     evaluate_promotion_suite,
     synthetic_promotion_pairs,
     verify_provenance,
     wilson_interval,
 )
-from agentflight.demo import run_demo
-from agentflight.flight_record import analyze_flight_record, intent_clause_id
-from agentflight.models import Event, EventType, IntentClauseKind
+from causalgate.demo import run_demo
+from causalgate.causal_record import analyze_causal_record, intent_clause_id
+from causalgate.models import Event, EventType, IntentClauseKind
 
 
 KEY = "test-only-assurance-key-with-at-least-32-bytes"
@@ -25,7 +25,7 @@ def test_clause_ids_use_canonical_full_sha256_identity():
 
 
 def test_coverage_separates_declaration_verification_and_action_binding():
-    record = analyze_flight_record(run_demo("protected"))
+    record = analyze_causal_record(run_demo("protected"))
     assert record.coverage.declaration_coverage_ratio <= record.coverage.coverage_ratio
     assert record.coverage.verified_coverage_ratio <= record.coverage.coverage_ratio
     assert record.coverage.consequential_action_coverage_ratio == 1
@@ -47,7 +47,7 @@ def test_divergence_frontier_preserves_incomparable_minimal_violations():
             logical_clock=1,
             payload={"output": "unsupported", "evidence": []},
         ))
-    record = analyze_flight_record(run)
+    record = analyze_causal_record(run)
     assert len(record.divergence_frontier) == 2
     assert {item.sequence for item in record.divergence_frontier} == added_sequences
     assert record.first_divergence == record.divergence_frontier[0]
@@ -65,8 +65,8 @@ def test_event_id_renaming_is_metamorphically_invariant():
         event.causal_predecessor_ids = [mapping[item] for item in event.causal_predecessor_ids]
         if isinstance(event.payload.get("evidence_event_ids"), list):
             event.payload["evidence_event_ids"] = [mapping[item] for item in event.payload["evidence_event_ids"]]
-    before = analyze_flight_record(original)
-    after = analyze_flight_record(renamed)
+    before = analyze_causal_record(original)
+    after = analyze_causal_record(renamed)
     assert [(binding.clause_id, binding.status) for binding in before.bindings] == [
         (binding.clause_id, binding.status) for binding in after.bindings
     ]

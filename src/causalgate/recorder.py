@@ -9,7 +9,7 @@ from uuid import uuid4
 from .models import Event, EventType, Execution, IntentContract, PolicyMode
 from .redaction import redacted_event_payload
 
-_active: contextvars.ContextVar["Recorder | None"] = contextvars.ContextVar("agentflight_recorder", default=None)
+_active: contextvars.ContextVar["Recorder | None"] = contextvars.ContextVar("causal_gate", default=None)
 
 
 class Recorder:
@@ -39,7 +39,7 @@ class Recorder:
         if set(event.causal_predecessor_ids) - existing_ids:
             raise ValueError("causal predecessors must reference earlier events in this execution")
         if event_type in {EventType.PLAN, EventType.DECISION}:
-            from .flight_record import intent_clauses
+            from .causal_record import intent_clauses
 
             if set(payload.get("evidence_event_ids", [])) - existing_ids:
                 raise ValueError("evidence must reference earlier events in this execution")

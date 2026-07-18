@@ -15,7 +15,7 @@ from .authorization import AuthorizationOntology
 from .models import IntentContract, StrictModel
 
 
-PROMPT_VERSION = "afr-intent-compiler-1.0"
+PROMPT_VERSION = "cg-intent-compiler-1.0"
 _calls: deque[float] = deque()
 _lock = threading.Lock()
 
@@ -54,18 +54,20 @@ class IntentCompilationUnavailable(RuntimeError):
     pass
 
 
-def _gate() -> tuple[str, str]:
-    if os.getenv("AGENTFLIGHT_LIVE_ANALYSIS_ENABLED", "false").lower() != "true":
+def _gate(api_key: str | None = None) -> tuple[str, str]:
+    if os.getenv("CAUSALGATE_LIVE_ANALYSIS_ENABLED", "false").lower() != "true":
         raise IntentCompilationUnavailable("Live intent compilation is disabled; deterministic contracts remain available.")
-    key = os.getenv("OPENAI_API_KEY")
+    key = (api_key or os.getenv("OPENAI_API_KEY", "")).strip()
     if not key:
-        raise IntentCompilationUnavailable("Live intent compilation is unavailable; deterministic contracts remain available.")
+        raise IntentCompilationUnavailable("Provide an OpenAI API key for this request; deterministic contracts remain available.")
+    if len(key) < 20 or any(character.isspace() for character in key):
+        raise IntentCompilationUnavailable("The supplied API key is invalid; deterministic contracts remain available.")
     with _lock:
         now = time.monotonic()
         while _calls and _calls[0] < now - 3600:
             _calls.popleft()
         try:
-            limit = max(1, min(20, int(os.getenv("AGENTFLIGHT_LIVE_ANALYSIS_LIMIT", "3"))))
+            limit = max(1, min(20, int(os.getenv("CAUSALGATE_LIVE_ANALYSIS_LIMIT", "3"))))
         except ValueError:
             raise IntentCompilationUnavailable("Live intent compilation configuration is invalid.") from None
         if len(_calls) >= limit:
@@ -74,11 +76,11 @@ def _gate() -> tuple[str, str]:
     return key, os.getenv("OPENAI_MODEL", "gpt-5.6-sol")
 
 
-def compile_intent_live(request_text: str, *, client=None) -> CompiledIntent:
+def compile_intent_live(request_text: str, *, client=None, api_key: str | None = None) -> CompiledIntent:
     request_text = request_text.strip()
     if not request_text or len(request_text) > 2_000:
         raise IntentCompilationUnavailable("Intent request must contain between 1 and 2,000 characters.")
-    key, model = _gate()
+    key, model = _gate(api_key)
     ontology = AuthorizationOntology.load_default()
     try:
         if client is None:
@@ -111,7 +113,7 @@ def compile_intent_live(request_text: str, *, client=None) -> CompiledIntent:
                     }, separators=(",", ":")),
                 },
             ],
-            text={"format": {"type": "json_schema", "name": "agentflight_intent_candidate", "strict": True,
+            text={"format": {"type": "json_schema", "name": "causalgate_intent_candidate", "strict": True,
                              "schema": IntentCandidate.model_json_schema()}},
         )
         candidate = IntentCandidate.model_validate_json(response.output_text)

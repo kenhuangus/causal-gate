@@ -15,7 +15,7 @@ from .models import EventType, Execution, IntentContract, StrictModel
 
 
 ONTOLOGY_PATH = Path(__file__).with_name("ontology.json")
-AUTHORIZER_VERSION = "AFR-INTENT-AUTHZ/1.0.0"
+AUTHORIZER_VERSION = "CG-INTENT-AUTHZ/1.0.0"
 
 
 def _now() -> datetime:
@@ -84,7 +84,7 @@ class AuthorizationOntology(StrictModel):
 
 
 class IntentGrant(StrictModel):
-    schema_version: str = "agentflight-intent-grant/1.0"
+    schema_version: str = "causalgate-intent-grant/1.0"
     grant_id: str
     issuer: str
     subject: str
@@ -124,7 +124,7 @@ class IntentGrant(StrictModel):
 class ApprovalArtifact(StrictModel):
     """Short-lived approval bound to one exact normalized request."""
 
-    schema_version: str = "agentflight-linked-approval/1.0"
+    schema_version: str = "causalgate-linked-approval/1.0"
     approval_id: str
     approver: str
     execution_id: str

@@ -1,12 +1,12 @@
-from agentflight.demo import FIXTURE_HASH, compare, run_demo
+from causalgate.demo import FIXTURE_HASH, compare, run_demo
 
 
 def test_vulnerable_scenario_finds_all_rules():
     run = run_demo("baseline")
     assert run.fixture_hash == FIXTURE_HASH
     assert {f.rule_id for f in run.findings} == {
-        "AFR-EGRESS-001", "AFR-APPROVAL-001", "AFR-CHAIN-001", "AFR-SOURCE-001",
-        "AFR-GOAL-001", "AFR-PRIV-001", "AFR-STATE-001", "AFR-COMPLETE-001",
+        "CG-EGRESS-001", "CG-APPROVAL-001", "CG-CHAIN-001", "CG-SOURCE-001",
+        "CG-GOAL-001", "CG-PRIV-001", "CG-STATE-001", "CG-COMPLETE-001",
     }
     assert all(set(f.evidence_event_ids) <= {e.id for e in run.events} for f in run.findings)
 

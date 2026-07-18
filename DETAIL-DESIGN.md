@@ -1,22 +1,18 @@
-# AgentFlight Recorder — Detailed Design
+# CausalGate — Detailed Design
 
 ## 1. Repository layout
 
 ```text
-agentflight-recorder/
-  apps/api/                 FastAPI application and routes
-  apps/web/                 React and TypeScript dashboard
-  packages/recorder/        tracing SDK and decorators
-  packages/contracts/       Pydantic domain schemas
-  packages/detectors/       deterministic and semantic detection rules
-  packages/policy/          runtime authorization checks
-  packages/replay/          fixtures and simulated tools
-  examples/research_agent/  vulnerable and protected demo
-  benchmark/scenarios/      labeled benign and adversarial fixtures
-  integrations/             OpenAI Agents SDK and LangGraph adapters
-  tests/                    unit, integration, benchmark, and end-to-end tests
-  docs/                     screenshots and demo narrative
+causal-gate/
+  src/causalgate/           API, SDK, contracts, detectors, authorization, replay, CLI
+  apps/web/                  React and TypeScript dashboard
+  evals/                     versioned benign and adversarial scenarios
+  tests/                     unit, integration, security, adapter, and API tests
+  artifacts/                 redacted, fixture-bound recorded model evidence
+  scripts/                   release and model-analysis verification helpers
+  docs/                      assurance specification and dated build record
   docker-compose.yml
+  cloudbuild.yaml
   README.md
 ```
 
@@ -26,9 +22,9 @@ Each event is represented by `TraceEventV1` with `event_id`, `execution_id`, `se
 
 Provenance contains source type, source identifier, content hash, and producing event. Sensitivity is an array drawn from `public`, `internal`, `personal`, `credential`, and `regulated`. Unknown payload keys are rejected on ingestion in strict mode.
 
-`plan` and `decision` extend the event enumeration. A plan includes `summary`, `subgoal_id`, `intent_clause_ids`, and `evidence_event_ids`. A decision includes `decision`, `summary`, `alternatives_considered`, `confidence`, `intent_clause_ids`, and `evidence_event_ids`. The application supplies these fields at runtime. Confidence is labeled self-reported and uncalibrated and cannot affect a gate. AgentFlight validates and displays the records but never claims they expose hidden model chain-of-thought. Payload schemas are allowlisted; unknown reasoning or metadata fields are rejected.
+`plan` and `decision` extend the event enumeration. A plan includes `summary`, `subgoal_id`, `intent_clause_ids`, and `evidence_event_ids`. A decision includes `decision`, `summary`, `alternatives_considered`, `confidence`, `intent_clause_ids`, and `evidence_event_ids`. The application supplies these fields at runtime. Confidence is labeled self-reported and uncalibrated and cannot affect a gate. CausalGate validates and displays the records but never claims they expose hidden model chain-of-thought. Payload schemas are allowlisted; unknown reasoning or metadata fields are rejected.
 
-## 2.1 Intent Flight Record algorithm
+## 2.1 Intent Causal Record algorithm
 
 1. Compile stable contract clauses for the goal, each allowed tool, prohibited outcome, protected resource, approval gate, and completion condition.
 2. Validate event parent references and walk ancestry in sequence order.
@@ -48,29 +44,29 @@ The quickstart target is three conceptual operations: configure a sink, start an
 
 ## 4. Intent contract generation
 
-GPT-5.6 receives the initial user request, a developer-supplied tool manifest, and a policy template. It returns `IntentContractV1`. The validator rejects unknown tool names, contradictory approval rules, absent goals, and resource references outside the manifest. The initial contract is immutable; changes create a new version with a reason and author.
+GPT-5.6 Sol with explicit medium reasoning receives the initial user request, a developer-supplied tool manifest, and a policy template. It returns a candidate `IntentContractV1`. The validator rejects unknown tool names, contradictory approval rules, absent goals, and resource references outside the manifest. A model-produced contract cannot issue authority: an authenticated human-confirmed endpoint must separately validate it and issue a signed grant.
 
 An example contract permits `web_search` and `summarize`, prohibits disclosure of protected values, requires approval for `send_message`, and defines completion as a sourced summary. Policy evaluation uses explicit fields, while free-text rationale is displayed only for explanation.
 
 ## 5. Detector algorithms
 
-`AFR-EGRESS-001` fires when an outbound tool argument contains a token or hash-derived marker previously labeled protected. The demo uses synthetic canary values, enabling deterministic matching without sending a secret to a model.
+`CG-EGRESS-001` fires when an outbound tool argument contains a token or hash-derived marker previously labeled protected. The demo uses synthetic canary values, enabling deterministic matching without sending a secret to a model.
 
-`AFR-APPROVAL-001` fires when a tool marked `approval_required` reaches execution without a preceding approved decision linked to the proposal event.
+`CG-APPROVAL-001` fires when a tool marked `approval_required` reaches execution without a preceding approved decision linked to the proposal event.
 
-`AFR-CHAIN-001` builds a per-execution data-flow graph from retrieval, state, and tool events. It fires when data flows from a protected source through a read-capable tool to an outbound tool and no policy decision breaks the path.
+`CG-CHAIN-001` builds a per-execution data-flow graph from retrieval, state, and tool events. It fires when data flows from a protected source through a read-capable tool to an outbound tool and no policy decision breaks the path.
 
-`AFR-SOURCE-001` compares instruction provenance with the intent contract and flags control-like instructions originating from retrieved or tool-generated content when they influence a protected proposal.
+`CG-SOURCE-001` compares instruction provenance with the intent contract and flags control-like instructions originating from retrieved or tool-generated content when they influence a protected proposal.
 
-`AFR-GOAL-001` compares planned and executed goals with the versioned intent contract. It uses explicit goal and tool boundaries first and invokes GPT-5.6 only for semantically ambiguous divergence.
+`CG-GOAL-001` compares planned and executed goals with the versioned intent contract. Deterministic rules own the finding and gate result; optional GPT-5.6 Sol analysis can add evidence-linked semantic investigation without changing either.
 
-`AFR-PRIV-001` identifies a transition from a lower-privilege action or agent identity to a higher-privilege tool, resource, or delegated agent without a matching authorization event.
+`CG-PRIV-001` identifies a transition from a lower-privilege action or agent identity to a higher-privilege tool, resource, or delegated agent without a matching authorization event.
 
-`AFR-STATE-001` tracks untrusted data entering durable memory or authorization-relevant state and fires when later decisions consume it without validation or provenance constraints.
+`CG-STATE-001` tracks untrusted data entering durable memory or authorization-relevant state and fires when later decisions consume it without validation or provenance constraints.
 
-`AFR-COMPLETE-001` compares completion claims with required completion conditions and evidence events. It flags a claimed result when required tool results, validations, or output artifacts are absent.
+`CG-COMPLETE-001` compares completion claims with required completion conditions and evidence events. It flags a claimed result when required tool results, validations, or output artifacts are absent.
 
-The GPT-5.6 detector receives event summaries and the intent contract. Its output includes `finding_type`, `summary`, `reasoning_summary`, `severity`, `confidence`, `evidence_event_ids`, and `recommended_control`. The postprocessor removes nonexistent evidence identifiers, downgrades unsupported findings to unverified, and merges overlap using detector type and evidence set.
+The optional GPT-5.6 Sol investigator receives a minimized redacted trace projection and the intent contract. Its output includes `finding_type`, `summary`, `reasoning_summary`, `severity`, `confidence`, `evidence_event_ids`, and `recommended_control`. Strict schema validation and evidence-ID validation reject unsupported output. Model findings remain separate from deterministic authorization and promotion decisions.
 
 ## 6. Policy evaluation
 
@@ -84,7 +80,7 @@ The comparison service creates a fixture-scoped `PromotionGate`. Its recommendat
 
 ## 8. API contract
 
-`POST /api/v1/executions` creates a run. `POST /api/v1/executions/{id}/events` appends an event. `POST /api/v1/executions/{id}/complete` seals the trace. `GET /api/v1/executions/{id}` returns the run. `GET /api/v1/executions/{id}/intent-flight-record` returns clauses, versioned evaluations, bindings, causal provenance, coverage measures, and the divergence frontier. `GET /api/v1/assurance-suite` executes the authenticated synthetic multi-fixture gate. Other endpoints provide optional semantic analysis, fixture comparison, benchmark evidence, and report export.
+`POST /api/v1/executions` creates a run. `POST /api/v1/executions/{id}/events` appends an event. `POST /api/v1/executions/{id}/complete` seals the trace. `GET /api/v1/executions/{id}` returns the run. `GET /api/v1/executions/{id}/intent-causal-record` returns clauses, versioned evaluations, bindings, causal provenance, coverage measures, and the divergence frontier. `GET /api/v1/assurance-suite` executes the authenticated synthetic multi-fixture gate. Other endpoints provide optional semantic analysis, fixture comparison, benchmark evidence, and report export.
 
 All mutation endpoints accept an idempotency key. Errors use a stable envelope with code, message, correlation identifier, and field details. Raw secret fields are never returned unless the local demo explicitly enables a synthetic-data reveal toggle.
 
@@ -94,17 +90,17 @@ The runs page shows status, policy mode, start time, finding count, and risk. Th
 
 ## 10. Test design
 
-Unit tests validate all schemas, redaction, each detector, policy precedence, evidence verification, and comparison alignment. Integration tests execute the vulnerable and protected fixtures through the API and database. Contract tests mock GPT-5.6 structured responses, including invalid JSON, nonexistent evidence, and timeouts. The end-to-end test starts the bundled agent, confirms seeded egress in baseline mode, confirms denial in protected mode, and verifies the exported report.
+Unit tests validate schemas, redaction, each detector, authorization precedence, signed grants, exact-action approvals, single-use permits, evidence verification, and comparison alignment. Integration tests execute vulnerable and protected fixtures through the API and SQLite store. Contract tests mock GPT-5.6 Sol structured responses, including invalid evidence and provider failures. CLI and API tests confirm seeded egress in observe-only baseline mode, denial in protected mode, report export, and the authenticated suite gate.
 
 ## 11. Definition of done
 
-The submission target is complete when clean-checkout setup succeeds, automated tests pass, the public Cloud Run demo uses synthetic data, any future private worker and benchmark job use least-privilege service accounts, both adapters emit valid traces, all 32 benchmark scenarios run, every detector has adversarial and benign evidence, replay modes work, CI thresholds behave deterministically, findings support mitigation workflow, model failure degrades safely, reports export, the five-engineer pilot is documented, and the README covers installation, supported platforms, testing, architecture, Codex usage, GPT-5.6 usage, limitations, and licensing.
+The repository implementation is complete when clean-checkout setup succeeds, automated tests pass, both adapters emit valid traces, all 32 benchmark scenarios run, every detector has adversarial and benign evidence, replay modes work, CI thresholds behave deterministically, model failure degrades safely, reports export, and the README covers installation, supported platforms, testing, architecture, Codex usage, GPT-5.6 Sol usage, limitations, and licensing. Public Cloud Run deployment, rendered-browser verification against that URL, the demo video, and the final Devpost entry are separate submission operations and must not be implied by repository code alone.
 
 ## 12. Judge test script
 
-The hosted landing page exposes `Run vulnerable scenario`, `Inspect evidence`, and `Replay with protection` as the primary actions. The vulnerable action resets and executes the seeded fixture. The evidence action opens `AFR-CHAIN-001`, highlights the retrieved injection, protected read, missing approval, and outbound proposal, and shows their immutable identifiers. The replay action runs the identical fixture hash under protected policy and displays the denied outbound action. A copyable verification command returns the fixture hash, detector assertions, and test status.
+The hosted landing page exposes `Run vulnerable scenario`, `Inspect evidence`, and `Replay with protection` as the primary actions. The vulnerable action resets and executes the seeded fixture. The evidence action opens `CG-CHAIN-001`, highlights the retrieved injection, protected read, missing approval, and outbound proposal, and shows their immutable identifiers. The replay action runs the identical fixture hash under protected policy and displays the denied outbound action. A copyable verification command returns the fixture hash, detector assertions, and test status.
 
-The local path is `docker compose up --wait`, followed by the printed application URL. `make verify-demo` runs the baseline and protected scenarios without a model key and checks expected findings. `make verify-gpt` optionally performs the live GPT-5.6 structured-output test when a key is configured.
+The local path is `docker compose up --build`, followed by `http://localhost:8080`. `make verify-demo` runs the Python suite plus the baseline and protected CLI scenarios without a model key. `make verify-live-analysis` performs the optional live GPT-5.6 Sol structured-output test when the runtime environment explicitly enables it and supplies a key.
 
 ## 13. Requirement-to-evidence matrix
 
@@ -112,7 +108,7 @@ The local path is `docker compose up --wait`, followed by the printed applicatio
 | --- | --- | --- |
 | FR-1 and FR-5 | Typed event schemas, ingestion route, timeline components | Timeline contains every seeded event in sequence |
 | FR-2 and FR-4 | Intent schema, prompt version, structured-output validator | Contract and cited semantic finding use valid identifiers |
-| FR-3 | Three deterministic detector modules | Seeded attack activates all expected assertions |
+| FR-3 | Eight deterministic detector classes | Labeled adversarial and near-miss fixtures exercise every class |
 | FR-6 | Fixture loader, simulator adapters, comparison service | Same fixture hash produces different policy outcome |
 | FR-7 | Markdown and JSON serializers | Export contains contract, evidence, decision, and comparison |
 | FR-8 | Synthetic research-agent package | Clean judge environment runs without external tools |
@@ -127,16 +123,16 @@ Each material component records task statement, Codex session, affected files, t
 
 ## 15. Product-state acceptance tests
 
-Browser tests cover first run, empty run list, baseline run, partial trace, deterministic-only analysis, live GPT-5.6 analysis, protected replay, failed replay, finding assignment, mitigation comparison, CI policy explanation, benchmark summary, and report export. The primary journey contains no mandatory form beyond the initial task. A reset action restores the fixture in one interaction. Keyboard focus, color-independent severity indicators, and readable event labels are required for the demonstrated screens.
+Automated UI contract tests cover the primary judge copy and controls, responsive and accessible styling invariants, Intent Causal Record, complete mediation, signed grant and single-use permit language, GPT-5.6 Sol boundaries, and the promotion gate. TypeScript and the production Vite build are verified separately. Rendered-browser interaction against a public deployment remains an explicit external release check; it is not claimed by source-level UI contract tests.
 
 SDK experience tests install the package in a clean example environment, execute the minimal integration, verify the printed trace URL, and confirm that a recorder outage produces the documented fail-open result. Protocol tests prove that a second sink and a test detector can be implemented without importing private modules.
 
 ## 16. Implementation scope
 
-The implementation includes the fixture, event contracts, SDK, persistence, eight detector classes, replay, framework adapters, live and recorded GPT-5.6 modes, the labeled benchmark, the React investigation experience, CLI and CI thresholds, evidence exports, assignments, mitigation comparison, usability validation, security testing, deployment, and frozen submission artifacts.
+The shipped implementation includes the fixture, event contracts, SDK, SQLite persistence, eight detector classes, intent authorizer, replay, framework adapters, live GPT-5.6 Sol and recorded legacy-model modes, labeled benchmark, React investigation experience, CLI and CI thresholds, evidence exports, deterministic comparison, authenticated suite gate, security tests, container packaging, and Cloud Run deployment configuration. It does not claim a completed public deployment, human usability pilot, or rendered-browser run.
 
 Direct event calls remain supported, but the packaged SDK, CLI, and adapters are release requirements. Additional detectors are accepted only with labeled adversarial and benign fixtures.
 
 ## 17. Release verification commands
 
-`make verify-demo` runs schema tests, both demonstration modes, detector assertions, comparison assertions, redaction checks, CI thresholds, and page smoke tests. `make verify-benchmark` evaluates all labeled scenarios and publishes versioned metrics. `make verify-adapters` runs framework contract suites. `make verify-clean` builds and starts the complete container stack and separately checks the SQLite quickstart. `make verify-recorded-analysis` validates stored GPT-5.6 artifacts against fixture hashes and schemas. `make verify-live-analysis` runs when a key is configured and otherwise reports a clear skip.
+`make verify-demo` runs the Python test suite and both deterministic demonstration modes. `make verify-benchmark` evaluates all labeled scenarios. `make verify-assurance` runs the authenticated multi-fixture promotion suite when an attestation key is supplied. `make verify-adapters` runs framework contract tests. `make verify-web` installs the locked frontend dependencies, runs UI contract tests, builds production assets, and audits high-severity dependencies. `make verify-clean` builds the container image. `make verify-recorded-analysis` validates the stored legacy-model artifact against its fixture hash and schema. `make verify-live-analysis` makes an authorized live call only when runtime configuration is present. `make verify-release` composes the keyless and attested release checks; rendered-browser and public-deployment checks remain external.

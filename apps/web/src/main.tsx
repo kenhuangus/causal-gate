@@ -11,7 +11,7 @@ type IntentClause={id:string;kind?:string;clause_type?:string;statement?:string;
 type IntentBinding={clause_id:string;event_id?:string;event_ids?:string[];status?:string;relationship?:string};
 type DecisionRecord={event_id:string;action?:string;decision:string;summary?:string;reason?:string;clause_ids?:string[];bound_clause_ids?:string[];evidence_event_ids?:string[];alternatives_considered?:string[];confidence?:number;confidence_semantics?:string};
 type ConsequentialAction=string|{event_id?:string;action?:string;reason?:string};
-type IntentFlightRecord={execution_id:string;clauses:IntentClause[];bindings:IntentBinding[];causal_chain_event_ids:string[];decision_records:DecisionRecord[];first_divergence_event_id:string|null;first_divergence_reason:string|null;intent_coverage:number;coverage?:{verified_coverage_ratio:number;declaration_coverage_ratio:number;consequential_action_coverage_ratio:number;verified_clauses:number;total_clauses:number};divergence_frontier?:{event_id:string;sequence:number}[];unbound_consequential_actions:ConsequentialAction[]};
+type IntentCausalRecord={execution_id:string;clauses:IntentClause[];bindings:IntentBinding[];causal_chain_event_ids:string[];decision_records:DecisionRecord[];first_divergence_event_id:string|null;first_divergence_reason:string|null;intent_coverage:number;coverage?:{verified_coverage_ratio:number;declaration_coverage_ratio:number;consequential_action_coverage_ratio:number;verified_clauses:number;total_clauses:number};divergence_frontier?:{event_id:string;sequence:number}[];unbound_consequential_actions:ConsequentialAction[]};
 type Health={status:string;mode:string;live_analysis:string;version:string};
 type Benchmark={suite_version:string;scenarios:number;true_positives:number;false_positives:number;false_negatives:number;precision:number;recall:number;specificity:number;deterministic:boolean;evidence_scope?:string;confidence_intervals?:{precision:{lower:number};recall:{lower:number};specificity:{lower:number}}};
 type AssuranceSuite={eligible:boolean;verdict:string;scope:string;production_safety_certification:boolean;cases:number;distinct_fixtures:number;scenario_families:number;channels:number;pass_interval:{lower:number;upper:number;estimate:number;method?:string};provenance:{artifact_digest:string;runner_identity:string;attestation_algorithm:string;source_revision?:string;detector_version?:string;policy_version?:string};checks?:{name:string;passed:boolean;summary:string}[];limitations:string[]};
@@ -21,9 +21,9 @@ type AuthorizationDecision={event_id:string;decision_id:string;outcome:string;en
 type AuthorizationRecord={execution_id:string;enforcement_model:string;ontology_version:string;ontology_digest:string;policy_version:string;grant_id:string|null;grant_digest:string|null;decisions:AuthorizationDecision[];allowed:number;denied:number;approval_required:number;complete_mediation:boolean;limitations:string[]};
 type BusyAction='baseline'|'protected'|'reset';
 
-const api=async<T,>(path:string,options?:RequestInit):Promise<T>=>{
+const api=async<T,>(path:string,options?:RequestInit,timeoutMs=15000):Promise<T>=>{
   const controller=new AbortController();
-  const timer=window.setTimeout(()=>controller.abort(),15000);
+  const timer=window.setTimeout(()=>controller.abort(),timeoutMs);
   try{
     const response=await fetch(path,{...options,signal:controller.signal,headers:{Accept:'application/json',...options?.headers}});
     if(!response.ok)throw new Error(`Request failed (${response.status})`);
@@ -50,9 +50,9 @@ const eventSummary=(event:Event)=>{
 const eventTone=(type:string)=>type.includes('policy')||type==='decision'?'policy':type.includes('tool')?'tool':type==='retrieval'?'retrieval':type==='final_answer'?'complete':'neutral';
 const severityRank:Record<string,number>={critical:0,high:1,medium:2,low:3};
 
-function Icon({name}:{name:'flight'|'play'|'shield'|'reset'|'download'|'check'|'pulse'|'arrow'|'file'|'database'|'warning'}){
+function Icon({name}:{name:'gate'|'play'|'shield'|'reset'|'download'|'check'|'pulse'|'arrow'|'file'|'database'|'warning'}){
   const paths={
-    flight:<><path d="M4 12h15M13 6l6 6-6 6"/><path d="M4 7h4M4 17h4"/></>,
+    gate:<><path d="M5 20V5l7-2 7 2v15"/><path d="M9 20v-7h6v7M3 20h18"/></>,
     play:<path d="m9 7 8 5-8 5V7Z"/>,shield:<path d="M12 3 5 6v5c0 4.7 2.9 8 7 10 4.1-2 7-5.3 7-10V6l-7-3Z"/>,
     reset:<><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8"/><path d="M4 4v4h4"/></>,download:<><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 20h14"/></>,
     check:<path d="m5 12 4 4L19 6"/>,pulse:<><path d="M3 12h4l2-5 4 10 2-5h6"/></>,arrow:<path d="m9 5 7 7-7 7"/>,
@@ -69,7 +69,7 @@ function ModeDisclosure({health,recorded,online}:{health:Health|null;recorded:Re
       <p className="popover-kicker">Execution provenance</p>
       <div className="mode-row"><Icon name="database"/><div><b>Fixture replay</b><span>Synthetic data · no external side effects</span></div><em>ACTIVE</em></div>
       <div className="mode-row"><Icon name="shield"/><div><b>Deterministic rules</b><span>Eight local, evidence-linked detectors</span></div><em>ACTIVE</em></div>
-      <div className="mode-row muted"><Icon name="pulse"/><div><b>Live model analysis</b><span>{health?.live_analysis==='enabled'?'Server-enabled; not used automatically':'Disabled in this judge session'}</span></div><em>OFF</em></div>
+      <div className="mode-row muted"><Icon name="pulse"/><div><b>Live model analysis</b><span>{health?.live_analysis==='byok_required'?'Ready for an ephemeral judge-supplied key':health?.live_analysis==='server_configured'?'Self-hosted server key configured':'Disabled in this judge session'}</span></div><em>OPT-IN</em></div>
       <div className="mode-note"><b>{recorded?`${recorded.model} recorded artifact available`:'Recorded analysis unavailable'}</b><span>{recorded?'Validated development evidence—never presented as a live call.':'Deterministic findings remain fully available.'}</span></div>
     </div>
   </details>;
@@ -80,7 +80,7 @@ function EmptyState({busy,onRun}:{busy:boolean;onRun:()=>void}){
     <div className="empty-visual" aria-hidden="true"><span>01</span><i/><span>02</span><i/><span>03</span></div>
     <p className="kicker">NO TRACE LOADED</p>
     <h2 id="empty-title">Find the earliest detected intent divergence</h2>
-    <p>Build an Intent Flight Record for a seeded prompt-injection incident, locate the causal-minimal violation, then test whether a control restores alignment.</p>
+    <p>Build an Intent Causal Record for a seeded prompt-injection incident, locate the causal-minimal violation, then test whether a control restores alignment.</p>
     <button className="button primary" onClick={onRun} disabled={busy}><Icon name="play"/>Run 13-event baseline</button>
     <ul aria-label="Scenario guarantees"><li><Icon name="check"/>No signup or API key</li><li><Icon name="check"/>No real secrets</li><li><Icon name="check"/>No external tools</li></ul>
   </section>;
@@ -123,7 +123,7 @@ function AssuranceSuiteCard({suite,loading,compact=false}:{suite:AssuranceSuite|
         <div className="assurance-checks"><p className="kicker">GATE CONDITIONS</p><ul>{checks.map(check=><li key={check.name}><span><Icon name={check.passed?'check':'warning'}/></span><div><b>{titleCase(check.name)}</b><p>{check.summary}</p></div></li>)}</ul></div>
         <div className="attestation-panel"><p className="kicker">RUNNER ATTESTATION</p><dl><div><dt>Artifact</dt><dd title={suite.provenance.artifact_digest}>{shortId(suite.provenance.artifact_digest)}</dd></div><div><dt>Runner</dt><dd>{suite.provenance.runner_identity}</dd></div><div><dt>Signature</dt><dd>{suite.provenance.attestation_algorithm}</dd></div><div><dt>Detector</dt><dd>{suite.provenance.detector_version||'versioned'}</dd></div></dl><p><Icon name="database"/>Scoped evidence—not a general production-safety certificate.</p></div>
       </div>}
-    </>:<div className="assurance-empty"><Icon name="warning"/><div><b>Attestation is not configured</b><p>The deterministic investigation remains available. Configure <code>AGENTFLIGHT_ATTESTATION_KEY</code> to produce signed suite evidence.</p></div></div>}
+    </>:<div className="assurance-empty"><Icon name="warning"/><div><b>Attestation is not configured</b><p>The deterministic investigation remains available. Configure <code>CAUSALGATE_ATTESTATION_KEY</code> to produce signed suite evidence.</p></div></div>}
   </section>;
 }
 
@@ -135,7 +135,7 @@ function IntentCard({run}:{run:Run}){
 }
 
 function AuthorizationCard({record,loading,error}:{record:AuthorizationRecord|null;loading:boolean;error:string}){
-  if(loading)return <section className="authorization-card authorization-loading" aria-busy="true"><div className="intent-flight-skeleton"><i/><i/><i/></div><span>Verifying complete mediation and signed authority…</span></section>;
+  if(loading)return <section className="authorization-card authorization-loading" aria-busy="true"><div className="intent-causal-skeleton"><i/><i/><i/></div><span>Verifying complete mediation and signed authority…</span></section>;
   if(error)return <section className="authorization-card authorization-error"><Icon name="warning"/><div><p className="kicker">INTENT-BASED ACCESS CONTROL</p><h2>Authorization evidence unavailable</h2><p>{error}</p></div></section>;
   if(!record)return null;
   return <section className="authorization-card" aria-labelledby="authorization-title">
@@ -147,11 +147,14 @@ function AuthorizationCard({record,loading,error}:{record:AuthorizationRecord|nu
   </section>;
 }
 
-function LiveJudgeAnalysis({health,analysis,busy,error,onAnalyze}:{health:Health|null;analysis:SemanticAnalysis|null;busy:boolean;error:string;onAnalyze:()=>void}){
-  const enabled=health?.live_analysis==='enabled';
+function LiveJudgeAnalysis({health,analysis,busy,error,onAnalyze}:{health:Health|null;analysis:SemanticAnalysis|null;busy:boolean;error:string;onAnalyze:(apiKey:string)=>Promise<void>}){
+  const [apiKey,setApiKey]=useState('');
+  const enabled=health?.live_analysis==='byok_required'||health?.live_analysis==='server_configured';
+  const serverConfigured=health?.live_analysis==='server_configured';
+  const submit=async()=>{const supplied=apiKey;setApiKey('');await onAnalyze(supplied)};
   return <section className="live-judge-card" aria-labelledby="live-judge-title">
-    <div className="live-judge-copy"><p className="kicker">OPTIONAL SEMANTIC INVESTIGATOR</p><h2 id="live-judge-title">GPT‑5.6 Sol, bounded by deterministic evidence</h2><p>Use medium reasoning to find semantic intent drift in a minimized, redacted trace. The result adds investigative evidence; it cannot authorize a tool or change the promotion gate.</p><div className="model-spec"><span>REQUESTED MODEL <b>gpt-5.6-sol</b></span><span>REASONING <b>medium</b></span><span>API <b>Responses</b></span></div></div>
-    <div className="live-judge-action"><button className="button primary" onClick={onAnalyze} disabled={!enabled||busy} aria-busy={busy}><Icon name="pulse"/>{busy?'Analyzing redacted trace…':analysis?.mode==='live'?'Run live analysis again':'Investigate with GPT‑5.6 Sol'}</button><span className={`availability ${enabled?'enabled':'disabled'}`}><i/>{enabled?'Runtime enabled':'Runtime disabled'}</span>{error&&<p role="alert">{error}</p>}</div>
+    <div className="live-judge-copy"><p className="kicker">OPTIONAL · BRING YOUR OWN KEY</p><h2 id="live-judge-title">GPT‑5.6 Sol, bounded by deterministic evidence</h2><p>Use medium reasoning to find semantic intent drift in a minimized, redacted trace. The result adds investigative evidence; it cannot authorize a tool or change the promotion gate.</p><div className="model-spec"><span>REQUESTED MODEL <b>gpt-5.6-sol</b></span><span>REASONING <b>medium</b></span><span>API <b>Responses</b></span></div></div>
+    <div className="live-judge-action">{!serverConfigured&&<label className="byok-field"><span>OPENAI API KEY</span><input type="password" value={apiKey} onChange={event=>setApiKey(event.target.value)} placeholder="Paste a restricted project key" autoComplete="off" spellCheck={false} disabled={!enabled||busy}/><small>Sent once over same-origin HTTPS · never persisted · cleared immediately</small></label>}<button className="button primary" onClick={submit} disabled={!enabled||busy||(!serverConfigured&&!apiKey.trim())} aria-busy={busy}><Icon name="pulse"/>{busy?'Analyzing redacted trace…':analysis?.mode==='live'?'Run live analysis again':'Investigate with GPT‑5.6 Sol'}</button><span className={`availability ${enabled?'enabled':'disabled'}`}><i/>{serverConfigured?'Server key configured':enabled?'Ephemeral BYOK ready':'Runtime disabled'}</span>{error&&<p role="alert">{error}</p>}</div>
     {analysis?.mode==='live'&&<div className="live-result"><header><div><span>VALIDATED LIVE RESPONSE</span><b>{analysis.model}</b></div><code title={analysis.response_id}>{shortId(analysis.response_id)}</code></header><div>{analysis.findings.length?analysis.findings.map((finding,index)=><article key={`${finding.finding_type}-${index}`}><span className={`severity ${finding.severity}`}><i/>{finding.severity}</span><div><h3>{finding.summary}</h3><p>{finding.reasoning_summary||'Evidence-linked semantic finding.'}</p></div><strong>{Math.round(finding.confidence*100)}%</strong></article>):<p>No semantic findings were returned.</p>}</div><footer>Requested {analysis.requested_model||'gpt-5.6-sol'} · resolved {analysis.model} · {analysis.reasoning_effort||'medium'} reasoning · prompt {analysis.prompt_version}</footer></div>}
   </section>;
 }
@@ -164,9 +167,9 @@ function TraceEventLink({id,label}:{id:string;label?:string}){
   return <a className="trace-event-link" href={`#event-${id}`} onClick={()=>focusEvent(id)} title={id}><span>{label||shortId(id)}</span><Icon name="arrow"/></a>;
 }
 
-function IntentFlightRecordView({record,loading,error}:{record:IntentFlightRecord|null;loading:boolean;error:string}){
-  if(loading)return <section className="intent-flight-card intent-flight-loading" aria-label="Loading Intent Flight Record" aria-busy="true"><div className="intent-flight-skeleton"><i/><i/><i/></div><span>Binding intent clauses to trace evidence…</span></section>;
-  if(error)return <section className="intent-flight-card intent-flight-unavailable" aria-labelledby="intent-flight-title"><Icon name="warning"/><div><p className="kicker">INTENT FLIGHT RECORD</p><h2 id="intent-flight-title">Intent analysis unavailable</h2><p>{error} The recorded trace and deterministic findings remain available.</p></div></section>;
+function IntentCausalRecordView({record,loading,error}:{record:IntentCausalRecord|null;loading:boolean;error:string}){
+  if(loading)return <section className="intent-causal-card intent-causal-loading" aria-label="Loading Intent Causal Record" aria-busy="true"><div className="intent-causal-skeleton"><i/><i/><i/></div><span>Binding intent clauses to trace evidence…</span></section>;
+  if(error)return <section className="intent-causal-card intent-causal-unavailable" aria-labelledby="intent-causal-title"><Icon name="warning"/><div><p className="kicker">INTENT CAUSAL RECORD</p><h2 id="intent-causal-title">Intent analysis unavailable</h2><p>{error} The recorded trace and deterministic findings remain available.</p></div></section>;
   if(!record)return null;
   const coverage=coveragePercent(record.coverage?.verified_coverage_ratio??record.intent_coverage);
   const declarationCoverage=coveragePercent(record.coverage?.declaration_coverage_ratio??0);
@@ -174,20 +177,20 @@ function IntentFlightRecordView({record,loading,error}:{record:IntentFlightRecor
   const frontierCount=record.divergence_frontier?.length||0;
   const bindingsByClause=new Map<string,IntentBinding[]>();
   for(const binding of record.bindings||[])bindingsByClause.set(binding.clause_id,[...(bindingsByClause.get(binding.clause_id)||[]),binding]);
-  return <section className="intent-flight-card" aria-labelledby="intent-flight-title">
-    <header className="intent-flight-heading"><div><p className="kicker">INTENT FLIGHT RECORD</p><h2 id="intent-flight-title">From declared contract to verified behavior</h2><p>A clause-by-clause conformance record with versioned verifier evidence and a causal-minimal divergence frontier.</p></div><div className="coverage-seal"><strong>{coverage}%</strong><span>verified coverage</span></div></header>
-    <div className="intent-flight-summary">
+  return <section className="intent-causal-card" aria-labelledby="intent-causal-title">
+    <header className="intent-causal-heading"><div><p className="kicker">INTENT CAUSAL RECORD</p><h2 id="intent-causal-title">From declared contract to verified behavior</h2><p>A clause-by-clause conformance record with versioned verifier evidence and a causal-minimal divergence frontier.</p></div><div className="coverage-seal"><strong>{coverage}%</strong><span>verified coverage</span></div></header>
+    <div className="intent-causal-summary">
       <article className="divergence-card"><span className="summary-icon"><Icon name="warning"/></span><div><p className="kicker">DIVERGENCE FRONTIER</p><h3>{record.first_divergence_event_id?`${frontierCount||1} causal-minimal violation${frontierCount===1?'':'s'}`:'No detected violation'}</h3><p>{record.first_divergence_reason||'No configured verifier classified an event as violating the declared contract.'}</p>{frontierCount>0&&<div className="frontier-links">{record.divergence_frontier?.map((item,index)=><TraceEventLink id={item.event_id} key={item.event_id} label={`F${index+1} · event ${item.sequence}`}/>)}</div>}</div></article>
       <article className="coverage-card"><div className="coverage-row"><div><p className="kicker">EVIDENCE COVERAGE</p><h3>Behavioral verification, separated from declarations</h3></div><b>{record.coverage?.verified_clauses ?? record.bindings?.length ?? 0} / {record.coverage?.total_clauses ?? record.clauses.length}</b></div><div className="coverage-breakdown"><div><span><b>Verified</b><em>{coverage}%</em></span><progress max="100" value={coverage}>{coverage}%</progress></div><div><span><b>Declared</b><em>{declarationCoverage}%</em></span><progress max="100" value={declarationCoverage}>{declarationCoverage}%</progress></div><div><span><b>Actions bound</b><em>{actionCoverage}%</em></span><progress max="100" value={actionCoverage}>{actionCoverage}%</progress></div></div><p>Each measure answers a different question; none is a safety score.</p></article>
       <article className={`unbound-card ${(record.unbound_consequential_actions||[]).length?'has-risk':''}`}><p className="kicker">UNBOUND ACTIONS</p><strong>{(record.unbound_consequential_actions||[]).length}</strong><h3>Consequential actions without an intent clause</h3><p>{(record.unbound_consequential_actions||[]).length?'Review these before promotion.':'Every consequential action has an explicit intent binding.'}</p></article>
     </div>
-    <div className="intent-flight-body">
-      <section className="clause-register" aria-labelledby="clause-register-title"><div className="flight-section-heading"><div><p className="kicker">CLAUSE REGISTER</p><h3 id="clause-register-title">Authorized boundaries</h3></div><span>{record.clauses?.length||0} clauses</span></div><ol>{(record.clauses||[]).map((clause,index)=>{
+    <div className="intent-causal-body">
+      <section className="clause-register" aria-labelledby="clause-register-title"><div className="causal-section-heading"><div><p className="kicker">CLAUSE REGISTER</p><h3 id="clause-register-title">Authorized boundaries</h3></div><span>{record.clauses?.length||0} clauses</span></div><ol>{(record.clauses||[]).map((clause,index)=>{
         const bindings=bindingsByClause.get(clause.id)||[];
         const eventIds=bindings.flatMap(binding=>binding.event_ids||[binding.event_id].filter((id):id is string=>Boolean(id)));
         const status=clause.status||bindings[0]?.status||(eventIds.length?'bound':'unbound');
         return <li key={clause.id} className={`clause-${status}`}><span className="clause-index">{String(index+1).padStart(2,'0')}</span><div><div className="clause-title"><b>{clauseCopy(clause)}</b><code title={clause.id}>{shortId(clause.id)}</code></div><p><span className={`clause-status ${status}`}>{titleCase(status)}</span><span>{titleCase(clause.kind||clause.clause_type||'intent clause')}</span>{clause.critical&&<span className="critical-clause">Critical</span>}</p><div className="clause-events">{eventIds.length?eventIds.map(id=><TraceEventLink id={id} key={id}/>):<span>No behavior-specific evidence</span>}</div></div></li>})}</ol></section>
-      <section className="decision-register" aria-labelledby="decision-register-title"><div className="flight-section-heading"><div><p className="kicker">STRUCTURED DECISIONS</p><h3 id="decision-register-title">Application decision record</h3></div><span>{record.decision_records?.length||0} decisions</span></div><p className="reasoning-disclosure"><Icon name="database"/><span><b>Application-provided summaries.</b> AgentFlight records structured decision fields and evidence links. Hidden model reasoning or chain-of-thought is not captured.</span></p><ol>{(record.decision_records||[]).map((decision,index)=>{
+      <section className="decision-register" aria-labelledby="decision-register-title"><div className="causal-section-heading"><div><p className="kicker">STRUCTURED DECISIONS</p><h3 id="decision-register-title">Application decision record</h3></div><span>{record.decision_records?.length||0} decisions</span></div><p className="reasoning-disclosure"><Icon name="database"/><span><b>Application-provided summaries.</b> CausalGate records structured decision fields and evidence links. Hidden model reasoning or chain-of-thought is not captured.</span></p><ol>{(record.decision_records||[]).map((decision,index)=>{
         const clauseIds=decision.bound_clause_ids||decision.clause_ids||[];
         return <li key={`${decision.event_id}-${index}`}><div className="decision-marker"><span>{String(index+1).padStart(2,'0')}</span><i/></div><div className="decision-copy"><div><span className={`decision-verdict ${decision.decision.toLowerCase()}`}>{titleCase(decision.decision)}</span><code>{decision.action||'application decision'}</code>{typeof decision.confidence==='number'&&<code>{Math.round(decision.confidence*100)}% self-reported confidence</code>}</div><p>{decision.summary||decision.reason||'No application summary was supplied.'}</p>{decision.alternatives_considered?.length&&<p className="decision-alternatives"><b>Alternatives considered:</b> {decision.alternatives_considered.join(' · ')}</p>}<footer><TraceEventLink id={decision.event_id}/><span>{clauseIds.length?`Bound to ${clauseIds.join(', ')}`:'No clause binding'}</span></footer></div></li>})}</ol></section>
     </div>
@@ -277,7 +280,7 @@ function App(){
   const [comparison,setComparison]=useState<Comparison|null>(null),[busy,setBusy]=useState<BusyAction|null>(null),[failedAction,setFailedAction]=useState<BusyAction|null>(null);
   const [error,setError]=useState(''),[status,setStatus]=useState('Ready to run the synthetic scenario.'),[online,setOnline]=useState(navigator.onLine);
   const [health,setHealth]=useState<Health|null>(null),[benchmark,setBenchmark]=useState<Benchmark|null>(null),[assurance,setAssurance]=useState<AssuranceSuite|null>(null),[recorded,setRecorded]=useState<RecordedAnalysis|null>(null),[metaLoading,setMetaLoading]=useState(true);
-  const [intentRecord,setIntentRecord]=useState<IntentFlightRecord|null>(null),[intentLoading,setIntentLoading]=useState(false),[intentError,setIntentError]=useState('');
+  const [intentRecord,setIntentRecord]=useState<IntentCausalRecord|null>(null),[intentLoading,setIntentLoading]=useState(false),[intentError,setIntentError]=useState('');
   const [authorization,setAuthorization]=useState<AuthorizationRecord|null>(null),[authorizationLoading,setAuthorizationLoading]=useState(false),[authorizationError,setAuthorizationError]=useState('');
   const [liveAnalysis,setLiveAnalysis]=useState<SemanticAnalysis|null>(null),[liveBusy,setLiveBusy]=useState(false),[liveError,setLiveError]=useState('');
   const evidence=useMemo(()=>new Set(selected?.evidence_event_ids||[]),[selected]);
@@ -306,8 +309,8 @@ function App(){
         setStatus(`Vulnerable scenario complete with ${value.findings.length} findings.`);
         requestAnimationFrame(()=>document.getElementById('execution-summary')?.focus());
         setIntentRecord(null);setIntentError('');setIntentLoading(true);setAuthorization(null);setAuthorizationError('');setAuthorizationLoading(true);setLiveAnalysis(null);setLiveError('');
-        const records=await Promise.allSettled([api<IntentFlightRecord>(`/api/v1/executions/${value.id}/intent-flight-record`),api<AuthorizationRecord>(`/api/v1/executions/${value.id}/authorization-record`)]);
-        if(records[0].status==='fulfilled')setIntentRecord(records[0].value);else setIntentError('The Intent Flight Record could not be loaded.');
+        const records=await Promise.allSettled([api<IntentCausalRecord>(`/api/v1/executions/${value.id}/intent-causal-record`),api<AuthorizationRecord>(`/api/v1/executions/${value.id}/authorization-record`)]);
+        if(records[0].status==='fulfilled')setIntentRecord(records[0].value);else setIntentError('The Intent Causal Record could not be loaded.');
         if(records[1].status==='fulfilled')setAuthorization(records[1].value);else setAuthorizationError('The authorization record could not be loaded.');
         setIntentLoading(false);setAuthorizationLoading(false);
       }else{
@@ -316,24 +319,24 @@ function App(){
         setStatus(`Protected replay complete with ${value.findings.length} findings.`);
         requestAnimationFrame(()=>document.getElementById('comparison-summary')?.focus());
       }
-    }catch(error){setFailedAction(mode);setError(error instanceof DOMException&&error.name==='AbortError'?'The AgentFlight service timed out. Retry when it is ready.':'The demo could not complete. Check the AgentFlight service and retry.');setStatus('Demo failed.')}finally{setBusy(null)}
+    }catch(error){setFailedAction(mode);setError(error instanceof DOMException&&error.name==='AbortError'?'The CausalGate service timed out. Retry when it is ready.':'The demo could not complete. Check the CausalGate service and retry.');setStatus('Demo failed.')}finally{setBusy(null)}
   };
   const reset=async()=>{
     if(busy)return;setBusy('reset');setFailedAction(null);setError('');setStatus('Resetting the synthetic demo.');
     try{await api('/api/v1/demo/reset',{method:'POST'});setRun(null);setProtected(null);setComparison(null);setSelected(null);setIntentRecord(null);setIntentError('');setIntentLoading(false);setAuthorization(null);setAuthorizationError('');setAuthorizationLoading(false);setLiveAnalysis(null);setLiveError('');setStatus('Demo reset. Ready to run the synthetic scenario.');requestAnimationFrame(()=>document.getElementById('run-baseline')?.focus())}
-    catch{setFailedAction('reset');setError('The demo could not reset. Check the AgentFlight service and retry.');setStatus('Reset failed.')}finally{setBusy(null)}
+    catch{setFailedAction('reset');setError('The demo could not reset. Check the CausalGate service and retry.');setStatus('Reset failed.')}finally{setBusy(null)}
   };
-  const analyzeWithSol=async()=>{
+  const analyzeWithSol=async(apiKey:string)=>{
     if(!run||liveBusy)return;
     setLiveBusy(true);setLiveError('');setStatus('GPT-5.6 Sol is analyzing the minimized redacted trace.');
-    try{const result=await api<SemanticAnalysis>(`/api/v1/executions/${run.id}/analyze/live`,{method:'POST'});setLiveAnalysis(result);setStatus(`Live semantic analysis completed with ${result.findings.length} findings.`)}
+    try{const result=await api<SemanticAnalysis>(`/api/v1/executions/${run.id}/analyze/live`,{method:'POST',headers:apiKey?{'X-OpenAI-API-Key':apiKey}:{}} ,70000);setLiveAnalysis(result);setStatus(`Live semantic analysis completed with ${result.findings.length} findings.`)}
     catch{setLiveError('Live analysis is unavailable. Deterministic authorization and findings remain valid.');setStatus('Live semantic analysis unavailable.')}finally{setLiveBusy(false)}
   };
   const retry=()=>failedAction==='reset'?reset():execute(failedAction||'baseline');
 
   return <div className="app-shell">
     <a className="skip-link" href="#main-content">Skip to investigation</a>
-    <header className="app-header"><a className="brand" href="#main-content" aria-label="AgentFlight Recorder home"><span className="brand-mark"><Icon name="flight"/></span><span><b>AgentFlight</b><small>RECORDER</small></span></a><span className="header-divider"/><p>Intent assurance for agent systems</p><nav aria-label="Product links"><a href="/api/docs">API docs</a><ModeDisclosure health={health} recorded={recorded} online={online}/></nav></header>
+    <header className="app-header"><a className="brand" href="#main-content" aria-label="CausalGate home"><span className="brand-mark"><Icon name="gate"/></span><span><b>CausalGate</b><small>INTENT CONTROL</small></span></a><span className="header-divider"/><p>Intent assurance for agent systems</p><nav aria-label="Product links"><a href="/api/docs">API docs</a><ModeDisclosure health={health} recorded={recorded} online={online}/></nav></header>
     {!online&&<div className="offline-banner" role="status"><Icon name="warning"/><span><b>Network unavailable</b> — reconnect to run or replay. Loaded evidence remains available.</span></div>}
     <main id="main-content">
       <section className="hero" aria-labelledby="page-title"><div className="hero-copy"><div className="eyebrow-row"><span>INTENT ASSURANCE</span><i/><span>SOFTWARE FACTORY EVIDENCE</span></div><h1 id="page-title">Find where intent<br/><em>diverged.</em></h1><p>Evaluate consequential actions against a declared contract, preserve concurrent divergence, and test a candidate control before release review.</p></div>
@@ -347,7 +350,7 @@ function App(){
         {protectedRun&&comparison&&<><ComparisonView baseline={run} protectedRun={protectedRun} comparison={comparison}/><AssuranceSuiteCard suite={assurance} loading={metaLoading}/></>}
         <IntentCard run={run}/>
         <AuthorizationCard record={authorization} loading={authorizationLoading} error={authorizationError}/>
-        <IntentFlightRecordView record={intentRecord} loading={intentLoading} error={intentError}/>
+        <IntentCausalRecordView record={intentRecord} loading={intentLoading} error={intentError}/>
         <LiveJudgeAnalysis health={health} analysis={liveAnalysis} busy={liveBusy} error={liveError} onAnalyze={analyzeWithSol}/>
         <section className="workbench"><FindingList findings={run.findings} selected={selected} onSelect={setSelected}/><Timeline run={run} evidence={evidence}/><EvidencePanel selected={selected} run={run} recorded={recorded}/></section>
       </>}

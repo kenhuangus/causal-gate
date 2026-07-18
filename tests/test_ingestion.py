@@ -3,13 +3,13 @@ import sqlite3
 
 from fastapi.testclient import TestClient
 
-from agentflight.api import create_app
-from agentflight.flight_record import intent_clauses
-from agentflight.models import Event, EventType, Execution
-from agentflight.storage import TraceStore
+from causalgate.api import create_app
+from causalgate.causal_record import intent_clauses
+from causalgate.models import Event, EventType, Execution
+from causalgate.storage import TraceStore
 
 
-ADMIN = {"X-AgentFlight-Admin": "test-admin-token"}
+ADMIN = {"X-CausalGate-Admin": "test-admin-token"}
 
 
 def _created(client: TestClient):
@@ -20,8 +20,8 @@ def _created(client: TestClient):
 
 
 def test_identical_retry_succeeds_changed_body_conflicts_and_seal_blocks(monkeypatch):
-    monkeypatch.setenv("AGENTFLIGHT_DEMO_MODE", "false")
-    monkeypatch.setenv("AGENTFLIGHT_ADMIN_TOKEN", "test-admin-token")
+    monkeypatch.setenv("CAUSALGATE_DEMO_MODE", "false")
+    monkeypatch.setenv("CAUSALGATE_ADMIN_TOKEN", "test-admin-token")
     client = TestClient(create_app(TraceStore(":memory:")))
     run = _created(client)
     event = Event(execution_id=run["id"], sequence=1, type=EventType.USER_INTENT, actor="user",
@@ -38,8 +38,8 @@ def test_identical_retry_succeeds_changed_body_conflicts_and_seal_blocks(monkeyp
 
 
 def test_parent_must_be_earlier_same_run(monkeypatch):
-    monkeypatch.setenv("AGENTFLIGHT_DEMO_MODE", "false")
-    monkeypatch.setenv("AGENTFLIGHT_ADMIN_TOKEN", "test-admin-token")
+    monkeypatch.setenv("CAUSALGATE_DEMO_MODE", "false")
+    monkeypatch.setenv("CAUSALGATE_ADMIN_TOKEN", "test-admin-token")
     client = TestClient(create_app(TraceStore(":memory:")))
     run = _created(client)
     event = Event(execution_id=run["id"], sequence=1, type=EventType.RETRIEVAL, actor="tool", payload={"document": "x"},
@@ -49,8 +49,8 @@ def test_parent_must_be_earlier_same_run(monkeypatch):
 
 
 def test_decision_evidence_and_intent_clauses_must_resolve_in_same_run(monkeypatch):
-    monkeypatch.setenv("AGENTFLIGHT_DEMO_MODE", "false")
-    monkeypatch.setenv("AGENTFLIGHT_ADMIN_TOKEN", "test-admin-token")
+    monkeypatch.setenv("CAUSALGATE_DEMO_MODE", "false")
+    monkeypatch.setenv("CAUSALGATE_ADMIN_TOKEN", "test-admin-token")
     client = TestClient(create_app(TraceStore(":memory:")))
     run = _created(client)
     intent_event = Event(
@@ -98,18 +98,18 @@ def test_public_demo_mode_blocks_general_trace_api():
 
 
 def test_private_execution_reads_and_reports_require_admin(monkeypatch):
-    monkeypatch.setenv("AGENTFLIGHT_DEMO_MODE", "false")
-    monkeypatch.setenv("AGENTFLIGHT_ADMIN_TOKEN", "test-admin-token")
+    monkeypatch.setenv("CAUSALGATE_DEMO_MODE", "false")
+    monkeypatch.setenv("CAUSALGATE_ADMIN_TOKEN", "test-admin-token")
     client = TestClient(create_app(TraceStore(":memory:")))
     run = _created(client)
     assert client.get(f"/api/v1/executions/{run['id']}").status_code == 401
     assert client.get(f"/api/v1/executions/{run['id']}/report").status_code == 401
     assert client.get(f"/api/v1/executions/{run['id']}", headers=ADMIN).status_code == 200
     assert client.get(f"/api/v1/executions/{run['id']}/report", headers=ADMIN).status_code == 200
-    assert client.get(f"/api/v1/executions/{run['id']}/flight-record").status_code == 401
-    flight_record = client.get(f"/api/v1/executions/{run['id']}/flight-record", headers=ADMIN)
-    assert flight_record.status_code == 200
-    assert flight_record.json()["execution_id"] == run["id"]
+    assert client.get(f"/api/v1/executions/{run['id']}/causal-record").status_code == 401
+    causal_record = client.get(f"/api/v1/executions/{run['id']}/causal-record", headers=ADMIN)
+    assert causal_record.status_code == 200
+    assert causal_record.json()["execution_id"] == run["id"]
 
 
 def test_stream_body_limit():
@@ -136,8 +136,8 @@ def test_rate_limit_response_keeps_security_headers():
 
 
 def test_client_supplied_redacted_payload_is_not_trusted(monkeypatch):
-    monkeypatch.setenv("AGENTFLIGHT_DEMO_MODE", "false")
-    monkeypatch.setenv("AGENTFLIGHT_ADMIN_TOKEN", "test-admin-token")
+    monkeypatch.setenv("CAUSALGATE_DEMO_MODE", "false")
+    monkeypatch.setenv("CAUSALGATE_ADMIN_TOKEN", "test-admin-token")
     client = TestClient(create_app(TraceStore(":memory:")))
     run = _created(client)
     event = Event(execution_id=run["id"], sequence=1, type=EventType.TOOL_RESULT, actor="tool",

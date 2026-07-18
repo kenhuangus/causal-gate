@@ -1,7 +1,7 @@
 [project]
-name = "agentflight-recorder"
+name = "causal-gate"
 version = "0.1.0"
-description = "Evidence-linked security traces and deterministic replay for AI agents"
+description = "Deterministic intent control, causal assurance, and release gating for AI agents"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115,<1",
@@ -15,14 +15,14 @@ dependencies = [
 dev = ["httpx>=0.28,<1", "pytest>=8,<9", "pytest-cov>=6,<7"]
 
 [project.scripts]
-agentflight = "agentflight.cli:main"
+causalgate = "causalgate.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentflight"]
+packages = ["src/causalgate"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

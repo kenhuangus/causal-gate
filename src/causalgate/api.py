@@ -18,8 +18,8 @@ from .authorization import AuthorizationOntology, AuthorizationRecord, IntentGra
 from .benchmark import run_benchmark
 from .demo import compare, run_demo
 from .detectors import analyze
-from .flight_record import analyze_flight_record
-from .models import Comparison, Event, Execution, FlightRecord, IntentContract, PolicyMode, StrictModel
+from .causal_record import analyze_causal_record
+from .models import Comparison, Event, Execution, CausalRecord, IntentContract, PolicyMode, StrictModel
 from .live_analysis import AnalysisArtifact, AnalysisUnavailable, analyze_live, verify_recorded_artifact
 from .intent_compiler import CompiledIntent, IntentCompilationUnavailable, compile_intent_live
 from .reporting import markdown_report
@@ -79,9 +79,9 @@ def create_app(
 ) -> FastAPI:
     if demo_max_records < 2 or demo_ttl_seconds <= 0:
         raise ValueError("invalid public demo retention settings")
-    app = FastAPI(title="AgentFlight Recorder", version="0.1.0", docs_url="/api/docs")
-    app.state.store = store or TraceStore(os.getenv("AGENTFLIGHT_DB", "data/agentflight.db"))
-    app.state.demo_mode = os.getenv("AGENTFLIGHT_DEMO_MODE", "true").lower() == "true"
+    app = FastAPI(title="CausalGate", version="0.1.0", docs_url="/api/docs")
+    app.state.store = store or TraceStore(os.getenv("CAUSALGATE_DB", "data/causalgate.db"))
+    app.state.demo_mode = os.getenv("CAUSALGATE_DEMO_MODE", "true").lower() == "true"
     app.state.demo_ids = OrderedDict()
     app.state.demo_lock = threading.RLock()
     app.state.rate = defaultdict(deque)
@@ -106,8 +106,8 @@ def create_app(
     def require_admin(request: Request):
         if app.state.demo_mode:
             raise HTTPException(403, "general trace API is disabled in synthetic demo mode")
-        expected = os.getenv("AGENTFLIGHT_ADMIN_TOKEN")
-        presented = request.headers.get("X-AgentFlight-Admin", "")
+        expected = os.getenv("CAUSALGATE_ADMIN_TOKEN")
+        presented = request.headers.get("X-CausalGate-Admin", "")
         if not expected or not secrets.compare_digest(presented, expected):
             raise HTTPException(401, "administrator authorization required")
 
@@ -135,7 +135,7 @@ def create_app(
             chunks.append(chunk)
         body = b"".join(chunks)
         request._body = body
-        if request.url.path.startswith("/api/v1/demo") or request.url.path in {
+        if request.url.path.startswith("/api/v1/demo") or request.url.path.endswith("/analyze/live") or request.url.path in {
             "/api/v1/benchmark", "/api/v1/assurance-suite", "/api/v1/intent/compile/live"
         }:
             key = request.client.host if request.client else "unknown"
@@ -150,8 +150,10 @@ def create_app(
 
     @app.get("/health")
     def health():
-        live_enabled = os.getenv("AGENTFLIGHT_LIVE_ANALYSIS_ENABLED", "false").lower() == "true"
-        return {"status": "ok", "mode": "deterministic", "live_analysis": "enabled" if live_enabled else "disabled", "version": app.version}
+        live_enabled = os.getenv("CAUSALGATE_LIVE_ANALYSIS_ENABLED", "false").lower() == "true"
+        server_key = bool(os.getenv("OPENAI_API_KEY", "").strip())
+        live_mode = "server_configured" if live_enabled and server_key else "byok_required" if live_enabled else "disabled"
+        return {"status": "ok", "mode": "deterministic", "live_analysis": live_mode, "version": app.version}
 
     @app.get("/api/v1/executions", response_model=list[Execution])
     def executions(request: Request):
@@ -214,14 +216,14 @@ def create_app(
             raise HTTPException(404, "execution not found")
         return _safe_execution(run)
 
-    @app.get("/api/v1/executions/{execution_id}/flight-record", response_model=FlightRecord)
-    @app.get("/api/v1/executions/{execution_id}/intent-flight-record", response_model=FlightRecord)
-    def flight_record(execution_id: str, request: Request):
+    @app.get("/api/v1/executions/{execution_id}/causal-record", response_model=CausalRecord)
+    @app.get("/api/v1/executions/{execution_id}/intent-causal-record", response_model=CausalRecord)
+    def causal_record(execution_id: str, request: Request):
         require_execution_access(execution_id, request)
         run = app.state.store.get(execution_id)
         if not run:
             raise HTTPException(404, "execution not found")
-        return analyze_flight_record(run)
+        return analyze_causal_record(run)
 
     @app.get("/api/v1/executions/{execution_id}/authorization-record", response_model=AuthorizationRecord)
     def execution_authorization_record(execution_id: str, request: Request):
@@ -246,11 +248,15 @@ def create_app(
         }
 
     @app.post("/api/v1/intent/compile/live", response_model=CompiledIntent)
-    def compile_intent(body: CompileIntentRequest, request: Request):
+    def compile_intent(
+        body: CompileIntentRequest,
+        request: Request,
+        x_openai_api_key: str | None = Header(default=None, alias="X-OpenAI-API-Key"),
+    ):
         if not app.state.demo_mode:
             require_admin(request)
         try:
-            return compile_intent_live(body.request)
+            return compile_intent_live(body.request, api_key=x_openai_api_key)
         except IntentCompilationUnavailable as exc:
             raise HTTPException(503, str(exc))
 
@@ -258,7 +264,7 @@ def create_app(
     def approve_intent(body: ApproveIntentRequest, request: Request):
         """Private control-plane operation; model output alone cannot invoke it."""
         require_admin(request)
-        key = os.getenv("AGENTFLIGHT_GRANT_SIGNING_KEY", "")
+        key = os.getenv("CAUSALGATE_GRANT_SIGNING_KEY", "")
         if len(key.encode()) < 32:
             raise HTTPException(503, "intent grant signing is not configured")
         try:
@@ -278,13 +284,17 @@ def create_app(
                                  headers={"Content-Disposition": f'attachment; filename="{execution_id}.md"'})
 
     @app.post("/api/v1/executions/{execution_id}/analyze/live", response_model=AnalysisArtifact)
-    def live_analysis(execution_id: str, request: Request):
+    def live_analysis(
+        execution_id: str,
+        request: Request,
+        x_openai_api_key: str | None = Header(default=None, alias="X-OpenAI-API-Key"),
+    ):
         require_execution_access(execution_id, request)
         run = app.state.store.get(execution_id)
         if not run:
             raise HTTPException(404, "execution not found")
         try:
-            return analyze_live(run)
+            return analyze_live(run, api_key=x_openai_api_key)
         except AnalysisUnavailable as exc:
             raise HTTPException(503, str(exc))
 
@@ -316,7 +326,7 @@ def create_app(
 
     @app.get("/api/v1/assurance-suite", response_model=SuitePromotionGate)
     def assurance_suite():
-        key = os.getenv("AGENTFLIGHT_ATTESTATION_KEY", "")
+        key = os.getenv("CAUSALGATE_ATTESTATION_KEY", "")
         if len(key.encode()) < 32:
             raise HTTPException(503, "authenticated suite attestation is not configured")
         return run_synthetic_assurance_suite(key)

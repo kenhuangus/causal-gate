@@ -1,5 +1,5 @@
-from agentflight.models import EventType, IntentContract
-from agentflight.recorder import Recorder, trace_tool
+from causalgate.models import EventType, IntentContract
+from causalgate.recorder import Recorder, trace_tool
 
 
 def test_payload_is_redacted_before_recording():

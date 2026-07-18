@@ -30,7 +30,7 @@ def _safe_execution(run: Execution) -> Execution:
 
 
 class TraceStore:
-    def __init__(self, path: str = "agentflight.db"):
+    def __init__(self, path: str = "causalgate.db"):
         self.path = path
         self._memory: dict[str, Execution] = {}
         self._memory_idempotency: dict[tuple[str, str], tuple[str, str]] = {}
@@ -247,7 +247,7 @@ class TraceStore:
         if event.logical_clock is not None and predecessor_clocks and event.logical_clock <= max(predecessor_clocks):
             raise ValueError("logical clock must advance beyond every causal predecessor")
         if event.type in {EventType.PLAN, EventType.DECISION}:
-            from .flight_record import intent_clauses
+            from .causal_record import intent_clauses
 
             evidence_ids = set(event.payload.get("evidence_event_ids", []))
             if evidence_ids - existing_ids:

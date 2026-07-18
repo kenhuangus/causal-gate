@@ -1,5 +1,5 @@
 {
-  "version": "agentflight-ontology/1.0",
+  "version": "causalgate-ontology/1.0",
   "actions": {
     "action.read": null,
     "action.read.public": "action.read",

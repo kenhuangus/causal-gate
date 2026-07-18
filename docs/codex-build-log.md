@@ -1,5 +1,17 @@
 # Codex build log
 
+> Naming note: entries below the CausalGate migration entry are historical and may use the former product name, `AgentFlight Recorder`, and its former `agentflight`/`AFR` identifiers. They are preserved as an accurate record of what was built and verified at the time.
+
+## 2026-07-18 — CausalGate product migration
+
+Request: rename the product to CausalGate because the former “Recorder” identity no longer represented the shipped intent authorization, causal-divergence analysis, replay, and software-factory promotion controls.
+
+Decision: migrate active product copy, package and CLI names, environment variables, public protocol and rule identifiers, UI, tests, release workflows, deployment configuration, and Intent Causal Record terminology. Preserve the historical recorded model artifact and earlier dated build entries rather than silently rewriting their provenance.
+
+Changes: renamed the Python distribution to `causal-gate`, package and CLI to `causalgate`, environment prefix to `CAUSALGATE_`, detector and protocol identifiers to `CG-*`, UI and governing documents to CausalGate, and the Intent Flight Record to Intent Causal Record. Added an explicit optional BYOK field after the keyless trace journey, request-scoped API-key handling, SaaS and tenant-isolation design, and a Cloud Run profile with no shared OpenAI credential.
+
+Verification: 63 Python tests passed, including ephemeral BYOK forwarding and non-persistence boundaries. The deterministic CLI returned eight baseline findings and zero protected findings under the renamed rule IDs. The 32-scenario benchmark and authenticated 12-fixture suite passed; the legacy recorded artifact retained integrity. Nine UI contract tests, TypeScript, the production Vite build, and the high-severity dependency audit passed with zero reported vulnerabilities. No live OpenAI request was made because no workspace key was created or reused.
+
 ## Judge-first repository narrative
 
 Request: replace the inherited README with a self-contained, winning-oriented explanation for judges that clearly states what AgentFlight is, why it matters, how it works, how Codex and GPT-5.6 contributed, which license applies, and exactly how to run and verify the project.

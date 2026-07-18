@@ -1,14 +1,14 @@
-# AgentFlight Assurance Specification
+# CausalGate Assurance Specification
 
 Status: implemented reference specification  
-Schema: `agentflight-assurance-suite/1.0`  
-Intent verifier: `AFR-INTENT-CONFORMANCE/2.0.0`
+Schema: `causalgate-assurance-suite/1.0`
+Intent verifier: `CG-INTENT-CONFORMANCE/2.0.0`
 
 ## 1. Claim boundary
 
-AgentFlight is a deterministic contract-conformance and replay-evidence system. Given a declared contract and a recorded event graph, it evaluates configured predicates, returns the causal-minimal frontier of detected violations, and can issue a scoped release recommendation for an authenticated fixture suite.
+CausalGate is a deterministic contract-conformance and replay-evidence system. Given a declared contract and a recorded event graph, it evaluates configured predicates, returns the causal-minimal frontier of detected violations, and can issue a scoped release recommendation for an authenticated fixture suite.
 
-AgentFlight does not recover latent user intent, inspect hidden model reasoning, prove detector completeness, establish philosophical causation, or certify general production safety.
+CausalGate does not recover latent user intent, inspect hidden model reasoning, prove detector completeness, establish philosophical causation, or certify general production safety.
 
 Supported terms are:
 
@@ -30,7 +30,7 @@ Recorder sequence is a deterministic presentation order. It is not treated as ca
 
 Each verifier implements `phi(c, e, G) -> (status, evidence, verifier ID, version)`. Status is `unknown`, `observed`, `satisfied`, or `violated`.
 
-`observed` means the application declared a relationship. It never constitutes behavioral satisfaction. `unknown` means no configured verifier has behavior-specific evidence. The flight record retains event-level evaluations so a later repair cannot erase `ever_violated` history.
+`observed` means the application declared a relationship. It never constitutes behavioral satisfaction. `unknown` means no configured verifier has behavior-specific evidence. The causal record retains event-level evaluations so a later repair cannot erase `ever_violated` history.
 
 The binding summary is conservative: `violated` dominates `satisfied`, which dominates `observed`. Consumers needing current-state semantics must use event-level evaluations.
 

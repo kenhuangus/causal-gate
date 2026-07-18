@@ -1,8 +1,9 @@
 import json
+import os
 
 import pytest
 
-from agentflight.intent_compiler import (
+from causalgate.intent_compiler import (
     IntentCompilationUnavailable,
     _calls,
     compile_intent_live,
@@ -38,7 +39,7 @@ class Client:
 @pytest.fixture(autouse=True)
 def live_enabled(monkeypatch):
     _calls.clear()
-    monkeypatch.setenv("AGENTFLIGHT_LIVE_ANALYSIS_ENABLED", "true")
+    monkeypatch.setenv("CAUSALGATE_LIVE_ANALYSIS_ENABLED", "true")
     monkeypatch.setenv("OPENAI_API_KEY", "synthetic-test-value")
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
 
@@ -75,6 +76,17 @@ def test_compiler_uses_sol_medium_strict_schema_and_only_proposes_authority():
     assert result.candidate_contract.allowed_tools == ["retrieve", "summarize"]
 
 
+def test_compiler_accepts_ephemeral_byok_without_persisting_it(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    result = compile_intent_live(
+        "Research Acme using only public sources.",
+        client=Client(candidate()),
+        api_key="synthetic-ephemeral-key-at-least-32-bytes",
+    )
+    assert result.status == "ready_for_human_approval"
+    assert os.getenv("OPENAI_API_KEY") is None
+
+
 def test_unknown_or_ambiguous_terms_never_become_authority():
     result = compile_intent_live(
         "Do the thing.",
@@ -86,13 +98,13 @@ def test_unknown_or_ambiguous_terms_never_become_authority():
 
 
 def test_disabled_and_provider_failures_are_sanitized(monkeypatch):
-    monkeypatch.setenv("AGENTFLIGHT_LIVE_ANALYSIS_ENABLED", "false")
+    monkeypatch.setenv("CAUSALGATE_LIVE_ANALYSIS_ENABLED", "false")
     client = Client(candidate())
     with pytest.raises(IntentCompilationUnavailable, match="disabled"):
         compile_intent_live("Research Acme.", client=client)
     assert client.responses.kwargs is None
 
-    monkeypatch.setenv("AGENTFLIGHT_LIVE_ANALYSIS_ENABLED", "true")
+    monkeypatch.setenv("CAUSALGATE_LIVE_ANALYSIS_ENABLED", "true")
     with pytest.raises(IntentCompilationUnavailable, match="failed safely") as exc:
         compile_intent_live("Research Acme.", client=Client(error=RuntimeError("provider secret")))
     assert "provider secret" not in str(exc.value)

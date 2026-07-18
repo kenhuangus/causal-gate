@@ -5,7 +5,7 @@ COPY apps/web/src ./src
 RUN npm ci && npm run build
 
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 AGENTFLIGHT_DB=/data/agentflight.db AGENTFLIGHT_DEMO_MODE=true
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 CAUSALGATE_DB=/data/causalgate.db CAUSALGATE_DEMO_MODE=true
 WORKDIR /app
 COPY pyproject.toml README.md requirements.lock ./
 COPY src ./src

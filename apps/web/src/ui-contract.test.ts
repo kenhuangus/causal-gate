@@ -10,7 +10,7 @@ describe('judge UI contracts',()=>{
     expect(source).toContain('/api/v1/comparisons/${run.id}/${value.id}');
     expect(source).toContain('/api/v1/recorded-analysis');
     expect(source).toContain('/api/v1/assurance-suite');
-    expect(source).not.toMatch(/sign[ -]?in|log[ -]?in|password/i);
+    expect(source).not.toMatch(/sign[ -]?in|log[ -]?in/i);
   });
 
   it('discloses deterministic, recorded, and live-analysis provenance',()=>{
@@ -38,13 +38,13 @@ describe('judge UI contracts',()=>{
   });
 
   it('presents intent evidence without implying access to hidden reasoning',()=>{
-    expect(source).toContain('/intent-flight-record');
-    for(const copy of ['INTENT FLIGHT RECORD','DIVERGENCE FRONTIER','CLAUSE REGISTER','STRUCTURED DECISIONS','CAUSAL PROVENANCE','UNBOUND ACTIONS']){
+    expect(source).toContain('/intent-causal-record');
+    for(const copy of ['INTENT CAUSAL RECORD','DIVERGENCE FRONTIER','CLAUSE REGISTER','STRUCTURED DECISIONS','CAUSAL PROVENANCE','UNBOUND ACTIONS']){
       expect(source).toContain(copy);
     }
     expect(source).toContain('Application-provided summaries');
     expect(source).toContain('Hidden model reasoning or chain-of-thought is not captured');
-    expect(styles).toContain('.intent-flight-card');
+    expect(styles).toContain('.intent-causal-card');
   });
 
   it('shows an evidence-gated software factory promotion decision',()=>{
@@ -61,6 +61,9 @@ describe('judge UI contracts',()=>{
     }
     expect(source).toContain('/authorization-record');
     expect(source).toContain('/analyze/live');
+    expect(source).toContain('BRING YOUR OWN KEY');
+    expect(source).toContain('never persisted');
+    expect(source).toContain("'X-OpenAI-API-Key':apiKey");
     expect(styles).toContain('.authorization-card');
     expect(styles).toContain('.live-judge-card');
   });

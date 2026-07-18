@@ -1,6 +1,6 @@
 {
-  "schema_version": "agentflight-eval-corpus/1.0",
-  "suite_id": "afr-suite-1.2",
+  "schema_version": "causalgate-eval-corpus/1.0",
+  "suite_id": "cg-suite-1.2",
   "label_method": "deterministic seeded target-rule labels",
   "annotation_status": "synthetic_author_labels",
   "splits": {

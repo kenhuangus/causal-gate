@@ -11,12 +11,12 @@ from pathlib import Path
 from pydantic import Field
 
 from .demo import compare, run_demo
-from .flight_record import analyze_flight_record
+from .causal_record import analyze_causal_record
 from .models import Execution, PolicyMode, PromotionCheck, StrictModel
 
 
-ASSURANCE_SCHEMA_VERSION = "agentflight-assurance-suite/1.0"
-ASSURANCE_SUITE_ID = "afr-promotion-suite-2.0"
+ASSURANCE_SCHEMA_VERSION = "causalgate-assurance-suite/1.0"
+ASSURANCE_SUITE_ID = "cg-promotion-suite-2.0"
 
 
 class ProportionInterval(StrictModel):
@@ -85,7 +85,7 @@ def source_artifact_digest() -> str:
         raise RuntimeError("verifier source is unavailable for provenance hashing")
     digest = hashlib.sha256()
     for path in paths:
-        digest.update(f"agentflight/{path.name}".encode())
+        digest.update(f"causalgate/{path.name}".encode())
         digest.update(b"\0")
         digest.update(path.read_bytes())
         digest.update(b"\0")
@@ -114,11 +114,11 @@ def attest_provenance(
     fields: dict[str, object] = {
         "schema_version": ASSURANCE_SCHEMA_VERSION,
         "suite_id": ASSURANCE_SUITE_ID,
-        "source_revision": source_revision or os.getenv("AGENTFLIGHT_SOURCE_REVISION", "uncommitted"),
+        "source_revision": source_revision or os.getenv("CAUSALGATE_SOURCE_REVISION", "uncommitted"),
         "artifact_digest": source_artifact_digest(),
-        "detector_version": "afr-detectors/2.0",
-        "policy_version": "afr-policy/2.0",
-        "runner_identity": runner_identity or os.getenv("AGENTFLIGHT_RUNNER_IDENTITY", "local-runner"),
+        "detector_version": "cg-detectors/2.0",
+        "policy_version": "cg-policy/2.0",
+        "runner_identity": runner_identity or os.getenv("CAUSALGATE_RUNNER_IDENTITY", "local-runner"),
         "fixture_digests": sorted(set(fixture_digests)),
         "generated_at": generated_at or datetime.now(timezone.utc),
         "attestation_algorithm": "hmac-sha256",
@@ -144,7 +144,7 @@ def evaluate_promotion_suite(
     if not pairs:
         raise ValueError("promotion suite must contain at least one replay pair")
     comparisons = [compare(baseline, candidate) for baseline, candidate in pairs]
-    candidate_records = [analyze_flight_record(candidate) for _, candidate in pairs]
+    candidate_records = [analyze_causal_record(candidate) for _, candidate in pairs]
     fixtures = {baseline.fixture_hash for baseline, _ in pairs if baseline.fixture_hash}
     contexts = []
     for baseline, _ in pairs:

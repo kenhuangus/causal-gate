@@ -74,7 +74,7 @@ class MediatedToolExecutor:
             "intent-authorizer",
             decision_event_payload(decision),
             parent_id=proposal.id,
-            provenance="agentflight:authorization",
+            provenance="causalgate:authorization",
         )
         if decision.outcome != "allow":
             raise PermissionError(decision.reason_code)

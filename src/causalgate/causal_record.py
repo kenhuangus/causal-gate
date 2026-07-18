@@ -13,7 +13,7 @@ from .models import (
     EventType,
     Execution,
     FirstDivergence,
-    FlightRecord,
+    CausalRecord,
     IntentBinding,
     IntentClause,
     IntentClauseKind,
@@ -24,7 +24,7 @@ from .models import (
 
 def intent_clause_id(kind: IntentClauseKind, subject: str) -> str:
     canonical_subject = " ".join(unicodedata.normalize("NFKC", subject).split())
-    digest = hashlib.sha256(f"agentflight:intent-clause:v2\0{kind.value}\0{canonical_subject}".encode()).hexdigest()
+    digest = hashlib.sha256(f"causalgate:intent-clause:v2\0{kind.value}\0{canonical_subject}".encode()).hexdigest()
     return f"intent_{kind.value}_{digest}"
 
 
@@ -68,7 +68,7 @@ def intent_clauses(contract: IntentContract) -> list[IntentClause]:
     return clauses
 
 
-def analyze_flight_record(run: Execution) -> FlightRecord:
+def analyze_causal_record(run: Execution) -> CausalRecord:
     """Bind trace evidence to intent without generating or exposing model reasoning."""
     clauses = intent_clauses(run.intent)
     clause_by_id = {clause.id: clause for clause in clauses}
@@ -82,7 +82,7 @@ def analyze_flight_record(run: Execution) -> FlightRecord:
         event: Event,
         status: BindingStatus,
         summary: str,
-        verifier_id: str = "AFR-INTENT-CONFORMANCE",
+        verifier_id: str = "CG-INTENT-CONFORMANCE",
     ) -> None:
         if clause is not None:
             evidence[clause.id].append((event, status, summary))
@@ -128,7 +128,7 @@ def analyze_flight_record(run: Execution) -> FlightRecord:
                 bind(
                     clause_by_id.get(str(clause_id)), event, status,
                     f"Intent authorization returned {outcome}: {event.payload.get('reason_code', 'policy decision')}.",
-                    verifier_id="AFR-INTENT-AUTHZ",
+                    verifier_id="CG-INTENT-AUTHZ",
                 )
             requested_tool = str(request.get("tool", ""))
             tool_clause = clause_by_kind_subject.get((IntentClauseKind.TOOL_AUTHORIZATION, requested_tool))
@@ -136,13 +136,13 @@ def analyze_flight_record(run: Execution) -> FlightRecord:
                 bind(
                     tool_clause, event, status,
                     f"Intent authorization evaluated tool {requested_tool}.",
-                    verifier_id="AFR-INTENT-AUTHZ",
+                    verifier_id="CG-INTENT-AUTHZ",
                 )
             if not explicit_ids and tool_clause is None:
                 bind(
                     goal, event, status,
                     f"Intent authorization evaluated {requested_tool or 'a consequential action'}.",
-                    verifier_id="AFR-INTENT-AUTHZ",
+                    verifier_id="CG-INTENT-AUTHZ",
                 )
 
         if event.type in {EventType.PLAN, EventType.DECISION}:
@@ -252,7 +252,7 @@ def analyze_flight_record(run: Execution) -> FlightRecord:
                 event_ids=event_ids,
                 summaries=summaries,
                 verified_event_ids=verified_event_ids,
-                verifier_ids=["AFR-INTENT-CONFORMANCE"] if verified_event_ids else [],
+                verifier_ids=["CG-INTENT-CONFORMANCE"] if verified_event_ids else [],
                 ever_violated=BindingStatus.VIOLATED in statuses,
             )
         )
@@ -429,7 +429,7 @@ def analyze_flight_record(run: Execution) -> FlightRecord:
                 cursor = event_by_id.get(cursor.parent_id) if cursor.parent_id else None
     causal_ids.update(event.id for event in run.events if event.type == EventType.USER_INTENT)
     causal_chain_ids = [event.id for event in sorted(run.events, key=lambda item: item.sequence) if event.id in causal_ids]
-    return FlightRecord(
+    return CausalRecord(
         execution_id=run.id,
         intent_version=run.intent.version,
         clauses=clauses,

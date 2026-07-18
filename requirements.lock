@@ -37,7 +37,7 @@ cryptography==49.0.0
 distro==1.9.0
     # via openai
 fastapi==0.139.2
-    # via agentflight-recorder
+    # via causal-gate
 griffelib==2.1.0
     # via openai-agents
 h11==0.16.0
@@ -69,15 +69,15 @@ mcp==1.28.1
     # via openai-agents
 openai==2.46.0
     # via
-    #   agentflight-recorder
+    #   causal-gate
     #   openai-agents
 openai-agents==0.18.3
-    # via agentflight-recorder
+    # via causal-gate
 pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
     # via cffi
 pydantic==2.13.4
     # via
-    #   agentflight-recorder
+    #   causal-gate
     #   fastapi
     #   mcp
     #   openai
@@ -142,7 +142,7 @@ urllib3==2.7.0
     # via requests
 uvicorn==0.51.0
     # via
-    #   agentflight-recorder
+    #   causal-gate
     #   mcp
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn

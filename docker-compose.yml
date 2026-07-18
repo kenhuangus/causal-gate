@@ -1,21 +1,21 @@
 services:
-  agentflight:
+  causalgate:
     build: .
     ports: ["8080:8080"]
     environment:
-      AGENTFLIGHT_DB: /data/agentflight.db
-      AGENTFLIGHT_ATTESTATION_KEY: ${AGENTFLIGHT_ATTESTATION_KEY:?set a 32-byte assurance-suite key}
-      AGENTFLIGHT_RUNNER_IDENTITY: local-docker-runner
-      AGENTFLIGHT_LIVE_ANALYSIS_ENABLED: ${AGENTFLIGHT_LIVE_ANALYSIS_ENABLED:-false}
-      AGENTFLIGHT_LIVE_ANALYSIS_LIMIT: ${AGENTFLIGHT_LIVE_ANALYSIS_LIMIT:-3}
+      CAUSALGATE_DB: /data/causalgate.db
+      CAUSALGATE_ATTESTATION_KEY: ${CAUSALGATE_ATTESTATION_KEY:?set a 32-byte assurance-suite key}
+      CAUSALGATE_RUNNER_IDENTITY: local-docker-runner
+      CAUSALGATE_LIVE_ANALYSIS_ENABLED: ${CAUSALGATE_LIVE_ANALYSIS_ENABLED:-false}
+      CAUSALGATE_LIVE_ANALYSIS_LIMIT: ${CAUSALGATE_LIVE_ANALYSIS_LIMIT:-3}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-sol}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      AGENTFLIGHT_GRANT_SIGNING_KEY: ${AGENTFLIGHT_GRANT_SIGNING_KEY:-}
-    volumes: ["agentflight-data:/data"]
+      CAUSALGATE_GRANT_SIGNING_KEY: ${CAUSALGATE_GRANT_SIGNING_KEY:-}
+    volumes: ["causalgate-data:/data"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
       interval: 5s
       timeout: 2s
       retries: 10
 volumes:
-  agentflight-data:
+  causalgate-data:

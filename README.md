@@ -1,10 +1,10 @@
-# AgentFlight Recorder
+# CausalGate
 
 **Intent assurance and intent-based access control for AI agents.**
 
-AgentFlight Recorder shows AI engineers not only *what* an agent did, but **which declared intent authorized each consequential action, where behavior first diverged, whether the action should have been allowed, and whether a proposed fix is safe to promote**.
+CausalGate shows AI engineers not only *what* an agent did, but **which declared intent authorized each consequential action, where behavior first diverged, whether the action should have been allowed, and whether a proposed fix is safe to promote**.
 
-It combines an evidence-linked Intent Flight Record, deterministic intent-based access control, counterfactual replay, an authenticated software-factory promotion gate, and an optional GPT-5.6 Sol investigator in one runnable developer tool.
+It combines an evidence-linked Intent Causal Record, deterministic intent-based access control, counterfactual replay, an authenticated software-factory promotion gate, and an optional GPT-5.6 Sol investigator in one runnable developer tool.
 
 > Track: **Developer Tools** · Built for **OpenAI Build Week** · Python 3.11+ · React · FastAPI · OpenAI Responses API
 
@@ -22,16 +22,16 @@ It combines an evidence-linked Intent Flight Record, deterministic intent-based 
 The complete deterministic demonstration runs without an account, external service, real secret, or OpenAI API key.
 
 ```bash
-git clone https://github.com/kenhuangus/agentflight-recorder.git
-cd agentflight-recorder
-export AGENTFLIGHT_ATTESTATION_KEY="$(openssl rand -hex 32)"
+git clone https://github.com/kenhuangus/causal-gate.git
+cd causal-gate
+export CAUSALGATE_ATTESTATION_KEY="$(openssl rand -hex 32)"
 docker compose up --build --wait
 ```
 
 Open [http://localhost:8080](http://localhost:8080), then:
 
 1. Select **Run vulnerable scenario**.
-2. Inspect the **Intent-Based Access Control** record and **Intent Flight Record**.
+2. Inspect the **Intent-Based Access Control** record and **Intent Causal Record**.
 3. Follow the causal frontier from untrusted retrieval to protected read and simulated egress.
 4. Select **Replay with protection**.
 5. Inspect the same fixture under enforcement and the evidence-gated promotion verdict.
@@ -59,13 +59,13 @@ AI engineers still have to answer harder questions manually:
 - Can a candidate repair be promoted without introducing another intent regression?
 - Can authorization remain deterministic even when a model helps interpret intent?
 
-AgentFlight is built around those questions. It treats intent as an executable, reviewable security boundary rather than another trace attribute.
+CausalGate is built around those questions. It treats intent as an executable, reviewable security boundary rather than another trace attribute.
 
-## What AgentFlight does
+## What CausalGate does
 
-### 1. Builds an Intent Flight Record
+### 1. Builds an Intent Causal Record
 
-An `IntentContract` becomes a canonical set of versioned clauses covering the goal, tools, protected resources, approval gates, prohibited effects, and completion conditions. AgentFlight binds recorded plans, application-provided decision summaries, tool proposals, results, state changes, and final answers to those clauses.
+An `IntentContract` becomes a canonical set of versioned clauses covering the goal, tools, protected resources, approval gates, prohibited effects, and completion conditions. CausalGate binds recorded plans, application-provided decision summaries, tool proposals, results, state changes, and final answers to those clauses.
 
 The record separates three measurements that are often incorrectly collapsed into one score:
 
@@ -73,17 +73,17 @@ The record separates three measurements that are often incorrectly collapsed int
 - **Verified coverage:** a deterministic verifier found behavior-specific evidence.
 - **Consequential-action coverage:** effectful actions have explicit clause bindings.
 
-AgentFlight does not claim access to hidden chain-of-thought. Decision summaries, alternatives, confidence, evidence references, and clause references are explicit application records. Confidence is labeled self-reported and uncalibrated.
+CausalGate does not claim access to hidden chain-of-thought. Decision summaries, alternatives, confidence, evidence references, and clause references are explicit application records. Confidence is labeled self-reported and uncalibrated.
 
 ### 2. Finds the causal-minimal divergence frontier
 
-Executions are treated as causal graphs, not merely timestamped lists. Parent, evidence, and declared predecessor edges establish a partial order. AgentFlight returns every detected violating event that has no earlier violating causal ancestor.
+Executions are treated as causal graphs, not merely timestamped lists. Parent, evidence, and declared predecessor edges establish a partial order. CausalGate returns every detected violating event that has no earlier violating causal ancestor.
 
 That matters for parallel agents: two incomparable failures remain two frontier events instead of being forced into a misleading single “first” event.
 
 ### 3. Enforces intent-based access control
 
-AgentFlight ships a closed, versioned authorization ontology. Every mapped effectful tool is normalized into:
+CausalGate ships a closed, versioned authorization ontology. Every mapped effectful tool is normalized into:
 
 `action + resource type + data class + destination + effects`
 
@@ -146,7 +146,7 @@ Model output cannot issue a grant, satisfy human approval, execute a tool, suppr
 
 ## Why it is different
 
-| Conventional agent observability | AgentFlight Recorder |
+| Conventional agent observability | CausalGate |
 |---|---|
 | Records prompts, spans, outputs, and tool calls | Connects consequential actions to canonical intent clauses |
 | Uses time order as the primary investigation view | Reconstructs recorded causal provenance and preserves concurrent divergence |
@@ -156,7 +156,7 @@ Model output cannot issue a grant, satisfy human approval, execute a tool, suppr
 | Produces evaluation scores | Produces authenticated, content-addressed release evidence with uncertainty bounds |
 | Lets an LLM interpret behavior | Uses the model as an untrusted proposer and investigator; deterministic code owns authority |
 
-AgentFlight is designed to complement tracing systems, not replace them. Existing OpenAI Agents SDK and LangGraph applications can normalize their events through the included adapters.
+CausalGate is designed to complement tracing systems, not replace them. Existing OpenAI Agents SDK and LangGraph applications can normalize their events through the included adapters.
 
 ## Architecture
 
@@ -174,7 +174,7 @@ instrumented agent ──► tool proposal ──► deterministic authorizer
        ▼                                  ▼
 append-only trace ◄──────────── mediated tool execution
        │
-       ├──► Intent Flight Record + divergence frontier
+       ├──► Intent Causal Record + divergence frontier
        ├──► deterministic security findings
        ├──► optional GPT-5.6 Sol semantic investigation
        └──► fixture replay ──► authenticated promotion gate
@@ -188,14 +188,14 @@ The baseline fixture exercises eight evidence-linked detector classes:
 
 | Rule | Condition |
 |---|---|
-| `AFR-EGRESS-001` | Protected data proposed for egress |
-| `AFR-APPROVAL-001` | Required approval missing |
-| `AFR-CHAIN-001` | Unsafe read-to-send tool chain |
-| `AFR-SOURCE-001` | Untrusted instructions influence control flow |
-| `AFR-GOAL-001` | Behavior departs from the declared goal or tools |
-| `AFR-PRIV-001` | Unauthorized protected-resource or privilege transition |
-| `AFR-STATE-001` | Untrusted input mutates authorization-relevant state |
-| `AFR-COMPLETE-001` | Completion is claimed without required evidence |
+| `CG-EGRESS-001` | Protected data proposed for egress |
+| `CG-APPROVAL-001` | Required approval missing |
+| `CG-CHAIN-001` | Unsafe read-to-send tool chain |
+| `CG-SOURCE-001` | Untrusted instructions influence control flow |
+| `CG-GOAL-001` | Behavior departs from the declared goal or tools |
+| `CG-PRIV-001` | Unauthorized protected-resource or privilege transition |
+| `CG-STATE-001` | Untrusted input mutates authorization-relevant state |
+| `CG-COMPLETE-001` | Completion is claimed without required evidence |
 
 Every finding cites validated event identifiers from its own execution.
 
@@ -211,47 +211,60 @@ Every finding cites validated event identifiers from its own execution.
 Install dependencies and build the web application:
 
 ```bash
-git clone https://github.com/kenhuangus/agentflight-recorder.git
-cd agentflight-recorder
+git clone https://github.com/kenhuangus/causal-gate.git
+cd causal-gate
 make install
 cd apps/web
 npm run build
 cd ../..
 ```
 
-Start AgentFlight:
+Start CausalGate:
 
 ```bash
-export AGENTFLIGHT_ATTESTATION_KEY="$(openssl rand -hex 32)"
-UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated \
-  uvicorn agentflight.api:app --host 0.0.0.0 --port 8080
+export CAUSALGATE_ATTESTATION_KEY="$(openssl rand -hex 32)"
+UV_CACHE_DIR=/tmp/causalgate-uv-cache uv run --isolated \
+  uvicorn causalgate.api:app --host 0.0.0.0 --port 8080
 ```
 
 Open [http://localhost:8080](http://localhost:8080). Stop the server with `Ctrl+C`.
 
-## Run with the OpenAI API
+## Optional GPT-5.6 Sol analysis with your own key
 
-The deterministic product works without OpenAI access. To enable the explicit live-analysis button and candidate-intent compiler, supply the key only at runtime:
+The entire deterministic judge journey works without OpenAI access. Live semantic investigation is deliberately opt-in and uses the judge's or end user's own OpenAI project key.
+
+### Hosted judge path: ephemeral BYOK
+
+1. Run the vulnerable scenario without a key.
+2. Open **Optional · Bring Your Own Key**.
+3. Paste a restricted OpenAI project key.
+4. Select **Investigate with GPT-5.6 Sol**.
+
+The browser sends the key once in the `X-OpenAI-API-Key` request header over same-origin HTTPS. CausalGate uses it for that provider request, does not persist it, and clears the input immediately. Use a restricted project key with a small budget and rotate it after testing. Do not use this flow on a deployment you do not trust.
+
+### Self-hosted path: server environment
+
+For local or private deployment, keep the key out of the browser and supply it as a server runtime environment variable:
 
 ```bash
 export OPENAI_API_KEY="your-runtime-key"
 export OPENAI_MODEL="gpt-5.6-sol"
-export AGENTFLIGHT_LIVE_ANALYSIS_ENABLED=true
-export AGENTFLIGHT_LIVE_ANALYSIS_LIMIT=3
-export AGENTFLIGHT_ATTESTATION_KEY="$(openssl rand -hex 32)"
+export CAUSALGATE_LIVE_ANALYSIS_ENABLED=true
+export CAUSALGATE_LIVE_ANALYSIS_LIMIT=3
+export CAUSALGATE_ATTESTATION_KEY="$(openssl rand -hex 32)"
 
 docker compose up --build --wait
 ```
 
-The key is read only by the server. It is not used during the image build, embedded in the browser bundle, written to traces, or committed to the repository.
+The key is read only by the server. It is not used during the image build, embedded in the browser bundle, written to traces, or committed to the repository. The public `cloudbuild.yaml` intentionally deploys no shared OpenAI credential.
 
 In the UI, run the baseline and select **Investigate with GPT-5.6 Sol**.
 
 To exercise the same live semantic-analysis path from the CLI without replacing the submitted artifact:
 
 ```bash
-UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated \
-  agentflight record-analysis --output /tmp/agentflight-live-analysis.json
+UV_CACHE_DIR=/tmp/causalgate-uv-cache uv run --isolated \
+  causalgate record-analysis --output /tmp/causalgate-live-analysis.json
 ```
 
 To compile a natural-language request into a non-authoritative candidate contract:
@@ -260,15 +273,18 @@ To compile a natural-language request into a non-authoritative candidate contrac
 curl --fail-with-body \
   --request POST http://localhost:8080/api/v1/intent/compile/live \
   --header 'Content-Type: application/json' \
+  --header 'X-OpenAI-API-Key: YOUR_RESTRICTED_PROJECT_KEY' \
   --data '{"request":"Research Acme using public sources and produce a local cited summary."}'
 ```
+
+The production multi-tenant roadmap, tenant isolation boundary, credential-vault option, pricing model, and abuse controls are documented in [`docs/SAAS-BYOK.md`](docs/SAAS-BYOK.md).
 
 ## CLI-only judge test
 
 The deterministic scenario can be verified without starting the web server:
 
 ```bash
-UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated agentflight verify-demo
+UV_CACHE_DIR=/tmp/causalgate-uv-cache uv run --isolated causalgate verify-demo
 ```
 
 Expected summary:
@@ -285,10 +301,10 @@ Run an individual scenario:
 
 ```bash
 # Baseline intentionally exits non-zero because it contains critical findings.
-UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated agentflight demo --mode baseline
+UV_CACHE_DIR=/tmp/causalgate-uv-cache uv run --isolated causalgate demo --mode baseline
 
 # Protected mode exits zero.
-UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated agentflight demo --mode protected
+UV_CACHE_DIR=/tmp/causalgate-uv-cache uv run --isolated causalgate demo --mode protected
 ```
 
 ## Verification and reproducibility
@@ -296,7 +312,7 @@ UV_CACHE_DIR=/tmp/agentflight-uv-cache uv run --isolated agentflight demo --mode
 Run the complete release verification:
 
 ```bash
-export AGENTFLIGHT_ATTESTATION_KEY="$(openssl rand -hex 32)"
+export CAUSALGATE_ATTESTATION_KEY="$(openssl rand -hex 32)"
 make verify-release
 ```
 
@@ -313,7 +329,7 @@ make verify-web                  # UI tests, production build, and npm audit
 
 Verified repository evidence at the time of this README revision:
 
-- 59 Python tests passing;
+- 63 Python tests passing;
 - 9 judge-UI contract tests passing;
 - production TypeScript and Vite build passing;
 - zero npm production-audit vulnerabilities;
@@ -329,7 +345,7 @@ These measurements describe the included synthetic regression evidence only. The
 |---|---|
 | `POST /api/v1/demo/baseline` | Run the synthetic observe-only incident |
 | `POST /api/v1/demo/protected` | Run the enforced counterfactual replay |
-| `GET /api/v1/executions/{id}/intent-flight-record` | Retrieve clause bindings and divergence frontier |
+| `GET /api/v1/executions/{id}/intent-causal-record` | Retrieve clause bindings and divergence frontier |
 | `GET /api/v1/executions/{id}/authorization-record` | Retrieve intent-authorization evidence |
 | `GET /api/v1/authorization/ontology` | Inspect the closed ontology version and digest |
 | `GET /api/v1/comparisons/{left}/{right}` | Compare replay outcomes and promotion evidence |
@@ -343,7 +359,7 @@ Public demo mode exposes only synthetic, fixture-scoped records. General ingesti
 
 ## Google Cloud Run deployment
 
-The included `cloudbuild.yaml` builds the container, pushes it to Artifact Registry, and deploys one public synthetic judge service. OpenAI and signing credentials are injected from Secret Manager at runtime.
+The included `cloudbuild.yaml` builds the container, pushes it to Artifact Registry, and deploys one public synthetic judge service. It injects only CausalGate's attestation and grant-signing secrets. There is no platform-funded or shared OpenAI key; judges bring their own key only when they explicitly request live analysis.
 
 Set the project and region:
 
@@ -362,36 +378,33 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   secretmanager.googleapis.com
 
-gcloud artifacts repositories create agentflight \
+gcloud artifacts repositories create causalgate \
   --repository-format=docker \
   --location="$REGION"
 
-gcloud iam service-accounts create agentflight-web \
-  --display-name="AgentFlight judge runtime"
+gcloud iam service-accounts create causalgate-web \
+  --display-name="CausalGate judge runtime"
 ```
 
-Create runtime secrets. For the OpenAI secret command, paste the Platform key into standard input and then send end-of-file; the key is not placed in the command line or image.
+Create the two CausalGate runtime secrets:
 
 ```bash
 openssl rand -hex 32 | \
-  gcloud secrets create agentflight-attestation-key --data-file=-
-
-gcloud secrets create agentflight-openai-api-key --data-file=-
+  gcloud secrets create causalgate-attestation-key --data-file=-
 
 openssl rand -hex 32 | \
-  gcloud secrets create agentflight-grant-signing-key --data-file=-
+  gcloud secrets create causalgate-grant-signing-key --data-file=-
 ```
 
 Allow the Cloud Run identity to read only those secrets:
 
 ```bash
 for SECRET in \
-  agentflight-attestation-key \
-  agentflight-openai-api-key \
-  agentflight-grant-signing-key
+  causalgate-attestation-key \
+  causalgate-grant-signing-key
 do
   gcloud secrets add-iam-policy-binding "$SECRET" \
-    --member="serviceAccount:agentflight-web@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --member="serviceAccount:causalgate-web@${PROJECT_ID}.iam.gserviceaccount.com" \
     --role="roles/secretmanager.secretAccessor"
 done
 ```
@@ -407,12 +420,12 @@ gcloud builds submit \
 Retrieve the public URL:
 
 ```bash
-gcloud run services describe agentflight-recorder \
+gcloud run services describe causal-gate \
   --region="$REGION" \
   --format='value(status.url)'
 ```
 
-Cloud Build and Cloud Run service-account permissions must be granted according to the policies of the target GCP organization. No API key is required or accepted as a Docker build argument.
+Cloud Build and Cloud Run service-account permissions must be granted according to the policies of the target GCP organization. No OpenAI API key is required or accepted as a Docker build argument or shared Cloud Run secret.
 
 ## Supported platforms
 
@@ -432,7 +445,7 @@ Codex was used as an engineering collaborator across schemas, deterministic auth
 
 Codex accelerated implementation and review, but did not own the product boundary. Key human-directed decisions included:
 
-- positioning AgentFlight as intent assurance rather than another observability dashboard;
+- positioning CausalGate as intent assurance rather than another observability dashboard;
 - refusing to claim hidden chain-of-thought capture;
 - keeping authorization and promotion deterministic;
 - treating GPT-5.6 Sol output as untrusted candidate evidence;
@@ -443,11 +456,11 @@ Codex accelerated implementation and review, but did not own the product boundar
 
 GPT-5.6 Sol is also a meaningful runtime component: it compiles candidate intent and performs evidence-linked semantic investigation. It is deliberately prevented from granting itself authority.
 
-OpenAI Build Week requires the README to explain how Codex and GPT-5.6 contributed, and evaluates technological implementation, design, potential impact, and quality of the idea equally. See the [official rules](https://openai.devpost.com/rules).
+OpenAI Build Week requires the README to explain how Codex and GPT-5.6 Sol contributed, and evaluates technological implementation, design, potential impact, and quality of the idea equally. See the [official rules](https://openai.devpost.com/rules).
 
 ## Security and scientific claim boundary
 
-AgentFlight provides deterministic conformance evidence for declared contracts and recorded events. It does not recover latent human intent, inspect private chain-of-thought, prove detector completeness, certify philosophical causation, replace a SIEM, or establish general production safety.
+CausalGate provides deterministic conformance evidence for declared contracts and recorded events. It does not recover latent human intent, inspect private chain-of-thought, prove detector completeness, certify philosophical causation, replace a SIEM, or establish general production safety.
 
 The trusted computing base includes the contract source, host identity binding, recorder, ontology, mediated adapters, authorizer, storage validation, verifier implementation, fixture corpus, runner, signing-key custody, and human release authority.
 
@@ -456,12 +469,13 @@ Known scale boundaries are disclosed in the API authorization record and [`docs/
 ## Repository map
 
 ```text
-src/agentflight/             Python SDK, API, authorization, analysis, replay
+src/causalgate/             Python SDK, API, authorization, analysis, replay
 apps/web/                    React and TypeScript judge interface
 tests/                       Unit, adversarial, API, replay, and adapter tests
 evals/                       Versioned assurance fixtures
 artifacts/                   Integrity-checked recorded analysis
 docs/ASSURANCE-SPEC.md       Formal definitions and claim boundaries
+docs/SAAS-BYOK.md             SaaS, tenant isolation, and BYOK architecture
 docs/codex-build-log.md      Codex collaboration evidence
 PRD.md                       Product requirements
 ARCHITECTURE.md              System and trust-boundary architecture
@@ -472,10 +486,10 @@ cloudbuild.yaml              Google Cloud build and deployment
 
 ## License
 
-AgentFlight Recorder is released under the permissive **MIT License**. See [`LICENSE`](LICENSE).
+CausalGate is released under the permissive **MIT License**. See [`LICENSE`](LICENSE).
 
 The OpenAI Build Week rules require a public repository to include relevant licensing but do not mandate a specific license. MIT makes the inspection and testing rights clear while preserving the required copyright and warranty notice. Third-party dependencies remain governed by their respective licenses and terms.
 
 ---
 
-**AgentFlight Recorder: trace what happened, prove where intent diverged, enforce what may happen next.**
+**CausalGate: trace what happened, prove where intent diverged, enforce what may happen next.**

@@ -1,9 +1,9 @@
 import pytest
 from pydantic import ValidationError
 
-from agentflight.demo import compare, run_demo
-from agentflight.flight_record import analyze_flight_record, intent_clauses
-from agentflight.models import BindingStatus, Event, EventType, IntentClauseKind
+from causalgate.demo import compare, run_demo
+from causalgate.causal_record import analyze_causal_record, intent_clauses
+from causalgate.models import BindingStatus, Event, EventType, IntentClauseKind
 
 
 def test_plan_and_decision_events_require_bounded_explicit_summaries():
@@ -52,7 +52,7 @@ def test_plan_and_decision_events_require_bounded_explicit_summaries():
         )
 
 
-def test_demo_flight_records_are_deterministic_and_keep_event_count():
+def test_demo_causal_records_are_deterministic_and_keep_event_count():
     baseline, protected = run_demo("baseline"), run_demo("protected")
     assert len(baseline.events) == 13
     assert [event.type for event in baseline.events].count(EventType.PLAN) == 1
@@ -62,8 +62,8 @@ def test_demo_flight_records_are_deterministic_and_keep_event_count():
         for event in baseline.events
     )
 
-    baseline_record = analyze_flight_record(baseline)
-    protected_record = analyze_flight_record(protected)
+    baseline_record = analyze_causal_record(baseline)
+    protected_record = analyze_causal_record(protected)
     assert baseline_record.first_divergence is not None
     assert baseline_record.first_divergence.sequence == 5
     assert baseline_record.first_divergence.event_id == baseline_record.plan_event_ids[0]
@@ -86,7 +86,7 @@ def test_demo_flight_records_are_deterministic_and_keep_event_count():
     assert protected_goal_binding.status == BindingStatus.SATISFIED
     assert any(protected_events[event_id].type != EventType.USER_INTENT for event_id in protected_goal_binding.event_ids)
 
-    repeated = analyze_flight_record(run_demo("baseline"))
+    repeated = analyze_causal_record(run_demo("baseline"))
     assert [clause.id for clause in baseline_record.clauses] == [clause.id for clause in repeated.clauses]
     assert [binding.status for binding in baseline_record.bindings] == [binding.status for binding in repeated.bindings]
     assert [clause.id for clause in intent_clauses(baseline.intent)] == [
@@ -101,7 +101,7 @@ def test_demo_flight_records_are_deterministic_and_keep_event_count():
         payload={"field": "display_preference", "value": "compact"},
     )
     unrelated.events.append(unrelated_event)
-    assert unrelated_event.id not in analyze_flight_record(unrelated).causal_chain_event_ids
+    assert unrelated_event.id not in analyze_causal_record(unrelated).causal_chain_event_ids
 
 
 def test_comparison_promotion_gate_requires_aligned_non_regressing_replay():

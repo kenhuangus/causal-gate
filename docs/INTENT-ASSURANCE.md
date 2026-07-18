@@ -1,8 +1,8 @@
-# AgentFlight intent-assurance thesis
+# CausalGate intent-assurance thesis
 
 ## Product claim
 
-AgentFlight is not differentiated by recording spans. Its product primitive is the **Intent Flight Record**: an evidence object that answers whether every consequential action remained justified by a declared intent contract.
+CausalGate is not differentiated by recording spans. Its product primitive is the **Intent Causal Record**: an evidence object that answers whether every consequential action remained justified by a declared intent contract.
 
 The minimum useful record connects:
 
@@ -12,7 +12,7 @@ The analyzer identifies the earliest event where that justification becomes inva
 
 ## What “reasoning capture” means
 
-AgentFlight does not access, reconstruct, or claim hidden model chain-of-thought. An instrumented application may record a compact decision artifact with:
+CausalGate does not access, reconstruct, or claim hidden model chain-of-thought. An instrumented application may record a compact decision artifact with:
 
 - the decision or selected action;
 - a concise rationale summary intended for inspection;
@@ -21,7 +21,7 @@ AgentFlight does not access, reconstruct, or claim hidden model chain-of-thought
 - evidence-event identifiers;
 - intent-clause identifiers.
 
-These fields are untrusted observations. AgentFlight validates their references and compares them with behavior. A plausible rationale does not override contradictory tool or state evidence, and absence of a record remains absence rather than being filled in by a model.
+These fields are untrusted observations. CausalGate validates their references and compares them with behavior. A plausible rationale does not override contradictory tool or state evidence, and absence of a record remains absence rather than being filled in by a model.
 
 ## Why this matters to an AI engineer
 
@@ -40,12 +40,12 @@ This can shorten the loop from incident to regression test because the evidence 
 
 ## Software-factory control loop
 
-An AI software factory can use AgentFlight as an independent promotion stage:
+An AI software factory can use CausalGate as an independent promotion stage:
 
-1. A runtime or evaluation failure produces an Intent Flight Record.
+1. A runtime or evaluation failure produces an Intent Causal Record.
 2. A coding agent receives the bounded failure record and proposes a code, prompt, tool-policy, or contract change.
 3. The candidate runs in a sandbox against the same fixture and the broader regression suite.
-4. AgentFlight recomputes intent bindings and the first divergence.
+4. CausalGate recomputes intent bindings and the first divergence.
 5. The promotion gate checks fixture parity, restored clauses, candidate divergence, and new deterministic findings.
 6. Passing changes may proceed to the next delivery gate; failing changes return an evidence package for another revision.
 
@@ -67,9 +67,9 @@ The prototype demonstrates these configured semantics on synthetic prompt-inject
 
 ## Competitive boundary
 
-Current official documentation positions [LangSmith](https://docs.langchain.com/langsmith/observability) around trace visibility and production observability, [Langfuse](https://langfuse.com/docs/observability/overview) around the full LLM request lifecycle and causal trace relationships, and [Arize Phoenix](https://arize.com/docs/phoenix/tracing/concepts-tracing/what-are-traces) around LLM/tool/agent spans, analysis, and evaluation. Those products provide valuable telemetry that AgentFlight can ingest or complement.
+Current official documentation positions [LangSmith](https://docs.langchain.com/langsmith/observability) around trace visibility and production observability, [Langfuse](https://langfuse.com/docs/observability/overview) around the full LLM request lifecycle and causal trace relationships, and [Arize Phoenix](https://arize.com/docs/phoenix/tracing/concepts-tracing/what-are-traces) around LLM/tool/agent spans, analysis, and evaluation. Those products provide valuable telemetry that CausalGate can ingest or complement.
 
-AgentFlight's deliberately narrow novelty claim is not better span collection. It is the combination of canonical intent clauses, versioned conformance evaluations, explicit decision artifacts, a causal-minimal divergence frontier, and authenticated replay-suite evidence. If AgentFlight only displays traces and findings, it is not meaningfully differentiated.
+CausalGate's deliberately narrow novelty claim is not better span collection. It is the combination of canonical intent clauses, versioned conformance evaluations, explicit decision artifacts, a causal-minimal divergence frontier, and authenticated replay-suite evidence. If CausalGate only displays traces and findings, it is not meaningfully differentiated.
 
 ## Design invariants
 

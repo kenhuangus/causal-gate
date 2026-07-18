@@ -1,9 +1,9 @@
 import pytest
 
-from agentflight.adapters import AgentsSDKTraceAdapter, LangGraphTraceAdapter, MediatedToolExecutor
-from agentflight.authorization import IntentAuthorizer, issue_grant
-from agentflight.models import EventType, IntentContract
-from agentflight.recorder import Recorder
+from causalgate.adapters import AgentsSDKTraceAdapter, LangGraphTraceAdapter, MediatedToolExecutor
+from causalgate.authorization import IntentAuthorizer, issue_grant
+from causalgate.models import EventType, IntentContract
+from causalgate.recorder import Recorder
 
 
 def test_agents_adapter_links_tool_events():

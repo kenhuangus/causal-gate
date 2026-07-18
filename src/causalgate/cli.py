@@ -13,7 +13,7 @@ from .reporting import markdown_report
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="agentflight")
+    parser = argparse.ArgumentParser(prog="causalgate")
     sub = parser.add_subparsers(dest="command", required=True)
     demo = sub.add_parser("demo", help="run the synthetic scenario")
     demo.add_argument("--mode", choices=[m.value for m in PolicyMode], default="baseline")
@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "verify-demo":
         base, protected = run_demo("baseline"), run_demo("protected")
         result = compare(base, protected)
-        required = {"AFR-EGRESS-001", "AFR-APPROVAL-001", "AFR-CHAIN-001"}
+        required = {"CG-EGRESS-001", "CG-APPROVAL-001", "CG-CHAIN-001"}
         passed = required <= {f.rule_id for f in base.findings} and not protected.findings and len(result.resolved_rules) == 8
         print(json.dumps({"passed": passed, "baseline_findings": len(base.findings), "protected_findings": len(protected.findings),
                           "fixture_hash": base.fixture_hash, "resolved": result.resolved_rules}, indent=2))
@@ -47,9 +47,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
     if args.command == "assurance-suite":
         import os
-        key = os.getenv("AGENTFLIGHT_ATTESTATION_KEY", "")
+        key = os.getenv("CAUSALGATE_ATTESTATION_KEY", "")
         if len(key.encode()) < 32:
-            print("AGENTFLIGHT_ATTESTATION_KEY must contain at least 32 bytes", file=sys.stderr)
+            print("CAUSALGATE_ATTESTATION_KEY must contain at least 32 bytes", file=sys.stderr)
             return 2
         result = run_synthetic_assurance_suite(key)
         print(result.model_dump_json(indent=2))

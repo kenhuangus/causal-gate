@@ -1,14 +1,14 @@
-# AgentFlight Recorder — Product Requirements Document
+# CausalGate — Product Requirements Document
 
 ## 1. Product summary
 
-AgentFlight Recorder is an intent-assurance tool for AI engineers and software factories. It converts an agent execution into versioned contract-conformance evidence binding a declared contract to explicit plans, application-provided decision summaries, tool calls, state mutations, approvals, evidence, and outcomes. It identifies the causal-minimal frontier of detected violations, supports same-fixture replay, and issues a scoped promotion recommendation only from an authenticated multi-fixture suite.
+CausalGate is an intent-assurance tool for AI engineers and software factories. It converts an agent execution into versioned contract-conformance evidence binding a declared contract to explicit plans, application-provided decision summaries, tool calls, state mutations, approvals, evidence, and outcomes. It identifies the causal-minimal frontier of detected violations, supports same-fixture replay, and issues a scoped promotion recommendation only from an authenticated multi-fixture suite.
 
 The hackathon submission targets the Developer Tools category. The submission supports OpenAI Agents SDK and LangGraph integrations, an intentionally vulnerable demonstration agent, eight detector classes, a hosted dashboard, CLI and CI workflows, a local Docker fallback, and repeatable attack–detect–repair–verify demonstrations.
 
 ## 1.1 Track fit and one-sentence value proposition
 
-AgentFlight Recorder fits the Developer Tools objective because it closes the loop between agent debugging and evidence-gated improvement. Its value proposition is: **locate causal-minimal detected departures from a declared contract, then collect authenticated replay evidence before promotion**. The submission shall describe it as an intent-assurance and change-verification instrument, not as a general monitoring dashboard, formal proof of latent intent, or security standard.
+CausalGate fits the Developer Tools objective because it closes the loop between agent debugging and evidence-gated improvement. Its value proposition is: **locate causal-minimal detected departures from a declared contract, then collect authenticated replay evidence before promotion**. The submission shall describe it as an intent-assurance and change-verification instrument, not as a general monitoring dashboard, formal proof of latent intent, or security standard.
 
 ## 2. Problem
 
@@ -40,11 +40,11 @@ The system shall convert the initial request and optional developer policy into 
 
 ### FR-3 Deterministic detectors
 
-The release shall implement detectors for protected-data egress, missing approval, unsafe tool chaining, instruction-source confusion, goal or intent drift, privilege escalation, untrusted memory or state mutation, and unsupported completion claims. Each detector shall emit a finding with rule identifier, severity, evidence event identifiers, explanation, and recommended control. At least the first three detectors shall be fully deterministic; semantic detectors shall combine explicit rules with validated GPT-5.6 analysis.
+The release shall implement detectors for protected-data egress, missing approval, unsafe tool chaining, instruction-source confusion, goal or intent drift, privilege escalation, untrusted memory or state mutation, and unsupported completion claims. Each detector shall emit a finding with rule identifier, severity, evidence event identifiers, explanation, and recommended control. At least the first three detectors shall be fully deterministic; semantic detectors shall combine explicit rules with validated GPT-5.6 Sol analysis.
 
-### FR-4 GPT-5.6 analysis
+### FR-4 GPT-5.6 Sol analysis
 
-When Platform access is configured, GPT-5.6 shall evaluate the trace and intent contract for intent divergence and prompt-injection influence. The model must return schema-validated JSON and cite only event identifiers present in the trace. Unsupported claims shall be rejected or marked as unverified. The submitted repository shall include one redacted analysis artifact generated during development, its schema-validation result, prompt version, and referenced fixture hash. The keyless judge path shall label this artifact as recorded and shall never imply that it is a live call.
+When a hosted judge supplies an ephemeral key or a self-hosted operator configures one server-side, GPT-5.6 Sol with medium reasoning shall evaluate the minimized redacted trace and intent contract for intent divergence and prompt-injection influence. The model must return schema-validated JSON and cite only event identifiers present in the trace. Unsupported claims are rejected. The historical recorded artifact remains fixture-bound and clearly labeled as non-live.
 
 ### FR-4A Intent-based access control
 
@@ -78,13 +78,13 @@ The command-line interface shall run a scenario suite, analyze imported traces, 
 
 ### FR-11 Security benchmark suite
 
-The repository shall include at least thirty synthetic, versioned scenarios across the eight detector classes, including target-rule-negative near-miss cases. A target-rule-negative trace may retain violations for other detector classes. The benchmark runner shall report per-rule precision and recall on labeled fixtures, replay determinism, runtime overhead, and GPT-5.6 evidence-citation validity. Results shall identify fixture count and version and shall not be generalized beyond the included suite.
+The repository shall include at least thirty synthetic, versioned scenarios across the eight detector classes, including target-rule-negative near-miss cases. A target-rule-negative trace may retain violations for other detector classes. The benchmark runner shall report per-rule precision and recall on labeled fixtures, replay determinism, runtime overhead, and GPT-5.6 Sol evidence-citation validity. Results shall identify fixture count and version and shall not be generalized beyond the included suite.
 
 ### FR-12 Team investigation workflow
 
 Users shall be able to assign a finding status, add a mitigation note, compare policy versions, and export a shareable evidence package. The release may use a single workspace and lightweight local identities; full enterprise identity management is outside scope.
 
-### FR-13 Intent Flight Record
+### FR-13 Intent Causal Record
 
 The system shall compile the intent contract into canonical full-digest clause identifiers and bind consequential events through versioned evaluations. The record shall include recorded causal provenance, explicit plan and decision records, separate declaration/verified/action coverage, unbound actions, and every causal-minimal detected divergence. Parent, predecessor, and evidence identifiers must resolve within the same execution.
 
@@ -102,15 +102,15 @@ Tool execution shall be deny-by-default in protected mode. The demo shall never 
 
 ## 8. Success metrics
 
-The demo is successful when the baseline run completes, applicable detectors identify seeded violations, GPT-5.6 analysis links conclusions to valid evidence events, protected mode blocks egress, replay shows the changed outcome, and the same scenario fails a configured CI policy check. Setup must work from the documented command, and the principal dashboard path must load reliably on the included fixture. Automated tests should cover event schemas, detectors, redaction, structured model output, framework adapters, CLI behavior, CI thresholds, and replay isolation.
+The demo is successful when the baseline run completes, applicable detectors identify seeded violations, GPT-5.6 Sol analysis links conclusions to valid evidence events, protected mode blocks egress, replay shows the changed outcome, and the same scenario fails a configured CI policy check. Setup must work from the documented command, and the principal dashboard path must load reliably on the included fixture. Automated tests should cover event schemas, detectors, redaction, structured model output, framework adapters, CLI behavior, CI thresholds, and replay isolation.
 
-The product-impact hypothesis is that AgentFlight Recorder helps an AI engineer identify the first policy-divergent event and verify a mitigation without manually correlating raw prompts, logs, and tool records. The evaluation shall measure successful finding identification, detector precision and recall on the labeled suite, evidence-citation validity, replay reproducibility, instrumentation overhead, CI decision consistency, and setup completion. A small pilot with at least five AI engineers shall record task completion and structured usability feedback. These prototype measurements shall not be presented as production performance claims.
+The product-impact hypothesis is that CausalGate helps an AI engineer identify the first policy-divergent event and verify a mitigation without manually correlating raw prompts, logs, and tool records. Repository evidence measures detector behavior on the labeled suite, evidence-citation validity, replay reproducibility, and CI decision consistency. Setup completion, instrumentation overhead, and any future human study require separately recorded evidence and are not implied by this PRD.
 
 ## 8.1 Judging-criteria proof plan
 
 | Criterion | Evidence the submission must show | Target |
 | --- | --- | --- |
-| Technological Implementation | Instrumented agent, typed append-only trace, deterministic data-flow rules, validated GPT-5.6 analysis, policy enforcement, and replay | One end-to-end fixture plus automated tests for every security rule |
+| Technological Implementation | Instrumented agent, typed append-only trace, deterministic data-flow rules, validated GPT-5.6 Sol analysis, policy enforcement, and replay | One end-to-end fixture plus automated tests for every security rule |
 | Design | A coherent task-to-finding-to-replay journey with progressive disclosure and synthetic data | A judge completes the primary journey without documentation |
 | Potential Impact | Named AI-engineer and security-engineer audience, measurable investigation workflow, and exportable evidence | Time-to-first-finding and mitigation-verification measurements included |
 | Quality of the Idea | Intent-to-action evidence graph plus counterfactual replay, rather than generic logging or model-only classification | Demo visibly distinguishes trace display, causal evidence, and control verification |
@@ -121,7 +121,7 @@ The repository shall maintain `docs/codex-build-log.md` with dated engineering t
 
 ## 9. Acceptance criteria
 
-The project is accepted for submission when a judge can open a hosted demo or run one documented command, execute both baseline and protected scenarios, inspect at least one evidence-linked finding, export a report, and reproduce the result using sample data. The repository must include a license, architecture overview, setup instructions, test command, sample output, supported platform statement, and a section explaining how Codex and GPT-5.6 were used.
+The project is accepted for submission when a judge can open a hosted demo or run one documented command, execute both baseline and protected scenarios, inspect at least one evidence-linked finding, export a report, and reproduce the result using sample data. The repository must include a license, architecture overview, setup instructions, test command, sample output, supported platform statement, and a section explaining how Codex and GPT-5.6 Sol were used.
 
 ## 10. Release priorities
 
@@ -129,9 +129,9 @@ The release priorities are a complete instrumented scenario, evidence-linked det
 
 ## 11. Hackathon demonstration
 
-The video opens with the authorized task, runs the vulnerable agent, and shows the unexpected protected-data egress. It then opens the finding, follows the evidence chain from retrieved injection to tool proposal and outbound call, enables the policy, and replays the same input. The protected run blocks the action and produces a comparison report. The narration identifies which code and tests Codex produced and where GPT-5.6 performs intent-contract and trace analysis.
+The video opens with the authorized task, runs the vulnerable agent, and shows the unexpected protected-data egress. It then opens the finding, follows the evidence chain from retrieved injection to tool proposal and outbound call, enables the policy, and replays the same input. The protected run blocks the action and produces a comparison report. The narration identifies which code and tests Codex produced and where GPT-5.6 Sol performs intent-contract and trace analysis.
 
-The video should cover the problem and audience, baseline run, evidence path, protected replay, measurable result, and Codex and GPT-5.6 implementation evidence. The recording shall prioritize the working interface over architecture slides.
+The video should cover the problem and audience, baseline run, evidence path, protected replay, measurable result, and Codex and GPT-5.6 Sol implementation evidence. The recording shall prioritize the working interface over architecture slides.
 
 ## 12. Panel-informed product review
 
@@ -155,29 +155,29 @@ The panel names and roles are published on the [OpenAI Build Week page](https://
 
 This positioning is based on current official product documentation, not a claim that competing platforms cannot be extended.
 
-| Product | Officially documented center of gravity | AgentFlight's deliberately narrower differentiation |
+| Product | Officially documented center of gravity | CausalGate's deliberately narrower differentiation |
 | --- | --- | --- |
 | [LangSmith Observability](https://docs.langchain.com/langsmith/observability) | Trace visibility, production metrics, dashboards, and agent debugging | Stable intent-clause bindings, a deterministic first authorization divergence, and an evidence-gated revision verdict |
 | [Langfuse Observability](https://langfuse.com/docs/observability/overview) | Full request lifecycle, tool and retrieval relationships, sessions, cost, latency, and attributes | Versioned conformance evidence requiring every consequential action to bind to the declared contract |
 | [Arize Phoenix Tracing](https://arize.com/docs/phoenix/tracing/concepts-tracing/what-are-traces) | LLM, tool, agent, and chain spans plus evaluation and trace analysis | A software-factory control loop that turns a causal-minimal divergence frontier and authenticated replay suite into a scoped recommendation |
 
-AgentFlight should integrate with or ingest conventional traces rather than compete on telemetry breadth. Its novelty claim rests on the contract-to-decision-to-action proof and conservative promotion gate. If those artifacts are absent, the product has fallen back to ordinary observability and has missed its product objective.
+CausalGate should integrate with or ingest conventional traces rather than compete on telemetry breadth. Its novelty claim rests on the contract-to-decision-to-action proof and conservative promotion gate. If those artifacts are absent, the product has fallen back to ordinary observability and has missed its product objective.
 
 ## 14. Scope and release gates
 
 | Gate | Required outcome |
 | --- | --- |
 | Vertical product | One instrumented agent, vulnerable and protected runs, persisted trace, first finding, and replay visible end to end |
-| Detection platform | Eight detector classes, thirty-scenario labeled suite, live and recorded GPT-5.6 paths, and two adapters with contract tests |
+| Detection platform | Eight detector classes, thirty-scenario labeled suite, live GPT-5.6 Sol and recorded legacy-model paths, and two adapters with contract tests |
 | Developer experience | Dashboard, CLI, CI gate, evidence export, mitigation workflow, hosted reset, and Docker fallback |
-| Validation and submission | Engineer pilot, benchmark report, performance and security checks, documentation, public repository, stable demo, and video |
+| Validation and submission | Benchmark report, security checks, documentation, public repository, stable deployed demo, rendered-browser evidence, and video |
 
 Every gate requires a deployable vertical product. Experimental production integrations, enterprise SSO, automatic code remediation, and detector claims without fixtures remain excluded.
 
 ## 15. Separation from AI Engineering Book Lab
 
-AgentFlight Recorder and AI Engineering Book Lab shall be submitted as separate repositories with no shared application package, database, user interface, demo fixture, video, or product description. AgentFlight Recorder's user is an engineer investigating an executed agent; its input is a trace; its central operation is causal incident analysis and replay; and its output is a security evidence report. Book Lab's user is a learner completing a coding task; its input is learner code; its central operation is isolated evaluation and progressive instruction; and its output is learning evidence and a mastery record. The shared subject of agent security is domain context, not a shared product implementation.
+CausalGate and AI Engineering Book Lab shall be submitted as separate repositories with no shared application package, database, user interface, demo fixture, video, or product description. CausalGate's user is an engineer investigating an executed agent; its input is a trace; its central operation is causal incident analysis and replay; and its output is a security evidence report. Book Lab's user is a learner completing a coding task; its input is learner code; its central operation is isolated evaluation and progressive instruction; and its output is learning evidence and a mastery record. The shared subject of agent security is domain context, not a shared product implementation.
 
 ## 16. Submission release gates
 
-The project cannot be marked submission-ready unless the hosted reset works in a clean browser, the Docker path works from a clean checkout, the vulnerable and protected fixture assertions pass, the demo contains no real secret or external side effect, the recorded GPT-5.6 artifact is labeled, the build log matches commits, the repository has a license, the public video is complete, and the Devpost submission is not left in draft state.
+The project cannot be marked submission-ready unless the hosted reset works in a clean browser, the Docker path works from a clean checkout, the vulnerable and protected fixture assertions pass, the demo contains no real secret or external side effect, the historical recorded artifact is labeled, the build log matches commits, the repository has a license, the public video is complete, and the Devpost submission is not left in draft state.

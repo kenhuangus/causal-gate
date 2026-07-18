@@ -1,6 +1,6 @@
-from agentflight.benchmark import RULES, evaluate_cases, run_benchmark
-from agentflight.models import IntentContract
-from agentflight.policy import evaluate
+from causalgate.benchmark import RULES, evaluate_cases, run_benchmark
+from causalgate.models import IntentContract
+from causalgate.policy import evaluate
 
 
 def test_policy_precedence():

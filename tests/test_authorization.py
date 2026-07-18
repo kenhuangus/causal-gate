@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentflight.authorization import (
+from causalgate.authorization import (
     AuthorizationOntology,
     IntentAuthorizer,
     authorization_record,
@@ -11,8 +11,8 @@ from agentflight.authorization import (
     issue_grant,
     verify_grant,
 )
-from agentflight.demo import DEMO_GRANT_KEY, run_demo
-from agentflight.models import IntentContract
+from causalgate.demo import DEMO_GRANT_KEY, run_demo
+from causalgate.models import IntentContract
 
 
 KEY = "test-intent-grant-signing-key-with-32-bytes"
@@ -53,7 +53,7 @@ def request(value: IntentContract, tool: str, arguments=None, **updates):
 
 def test_ontology_is_closed_versioned_and_covers_shipped_effectful_tools():
     ontology = AuthorizationOntology.load_default()
-    assert ontology.version == "agentflight-ontology/1.0"
+    assert ontology.version == "causalgate-ontology/1.0"
     assert ontology.digest.startswith("sha256:")
     assert {"retrieve", "read_public", "summarize", "read_secret", "send_message", "write_memory", "delegate_agent"} <= ontology.tools.keys()
     for tool in ontology.tools.values():

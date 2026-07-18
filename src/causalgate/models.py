@@ -257,7 +257,7 @@ class ConsequentialAction(StrictModel):
     reason: str
 
 
-class FlightRecord(StrictModel):
+class CausalRecord(StrictModel):
     execution_id: str
     intent_version: int
     clauses: list[IntentClause]
