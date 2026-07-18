@@ -21,10 +21,19 @@ def test_health_and_demo_journey():
     assert len(comparison.json()["resolved_rules"]) == 8
     report = c.get(f"/api/v1/executions/{baseline['id']}/report")
     assert "AFR-EGRESS-001" in report.text
+    flight_record = c.get(f"/api/v1/executions/{baseline['id']}/intent-flight-record")
+    assert flight_record.status_code == 200
+    assert flight_record.json()["first_divergence"]["sequence"] == 3
+    assert flight_record.json()["plan_event_ids"]
+    assert flight_record.json()["decision_records"]
+    assert flight_record.json()["causal_chain_event_ids"]
+    assert comparison.json()["promotion_gate"]["verdict"] == "promote"
 
 
 def test_missing_execution_is_404():
     assert client().get("/api/v1/executions/not-found").status_code == 404
+    assert client().get("/api/v1/executions/not-found/flight-record").status_code == 404
+    assert client().get("/api/v1/executions/not-found/intent-flight-record").status_code == 404
 
 
 def test_live_analysis_disabled_fails_safely(monkeypatch):

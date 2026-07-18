@@ -15,7 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from .benchmark import run_benchmark
 from .demo import compare, run_demo
 from .detectors import analyze
-from .models import Comparison, Event, Execution, IntentContract, PolicyMode, StrictModel
+from .flight_record import analyze_flight_record
+from .models import Comparison, Event, Execution, FlightRecord, IntentContract, PolicyMode, StrictModel
 from .live_analysis import AnalysisArtifact, AnalysisUnavailable, analyze_live, verify_recorded_artifact
 from .reporting import markdown_report
 from .redaction import redacted_event_payload
@@ -195,6 +196,15 @@ def create_app(
         if not run:
             raise HTTPException(404, "execution not found")
         return _safe_execution(run)
+
+    @app.get("/api/v1/executions/{execution_id}/flight-record", response_model=FlightRecord)
+    @app.get("/api/v1/executions/{execution_id}/intent-flight-record", response_model=FlightRecord)
+    def flight_record(execution_id: str, request: Request):
+        require_execution_access(execution_id, request)
+        run = app.state.store.get(execution_id)
+        if not run:
+            raise HTTPException(404, "execution not found")
+        return analyze_flight_record(run)
 
     @app.get("/api/v1/executions/{execution_id}/report")
     def report(execution_id: str, request: Request, format: str = "markdown"):

@@ -31,11 +31,21 @@ class Recorder:
         event = Event(execution_id=self.execution.id, sequence=len(self.execution.events) + 1,
                       type=event_type, actor=actor, payload=payload,
                       redacted_payload=redacted_event_payload(payload, sensitivity), **kwargs)
+        if event_type in {EventType.PLAN, EventType.DECISION}:
+            from .flight_record import intent_clauses
+
+            existing_ids = {existing.id for existing in self.execution.events}
+            if set(payload.get("evidence_event_ids", [])) - existing_ids:
+                raise ValueError("evidence must reference earlier events in this execution")
+            valid_clause_ids = {clause.id for clause in intent_clauses(self.execution.intent)}
+            if set(payload.get("intent_clause_ids", [])) - valid_clause_ids:
+                raise ValueError("intent clause does not exist in this execution contract")
         self.execution.events.append(event)
         return event
 
-    def finish(self, output: str, unsupported_claim: bool = False, evidence: list[str] | None = None) -> Execution:
-        self.record(EventType.FINAL_ANSWER, "agent", {"output": output, "evidence": evidence or []})
+    def finish(self, output: str, unsupported_claim: bool = False, evidence: list[str] | None = None,
+               parent_id: str | None = None) -> Execution:
+        self.record(EventType.FINAL_ANSWER, "agent", {"output": output, "evidence": evidence or []}, parent_id=parent_id)
         return self.execution
 
 

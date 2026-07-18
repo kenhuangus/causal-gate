@@ -26,6 +26,20 @@ Each event is represented by `TraceEventV1` with `event_id`, `execution_id`, `se
 
 Provenance contains source type, source identifier, content hash, and producing event. Sensitivity is an array drawn from `public`, `internal`, `personal`, `credential`, and `regulated`. Unknown payload keys are rejected on ingestion in strict mode.
 
+`plan` and `decision` extend the event enumeration. A plan includes `summary`, `subgoal_id`, `intent_clause_ids`, and `evidence_event_ids`. A decision includes `decision`, `summary`, `alternatives_considered`, `confidence`, `intent_clause_ids`, and `evidence_event_ids`. The application supplies these summaries at runtime. AgentFlight validates and displays them but never claims they expose hidden model chain-of-thought. Their payload schemas are allowlisted; unknown reasoning or metadata fields are rejected.
+
+## 2.1 Intent Flight Record algorithm
+
+1. Compile stable contract clauses for the goal, each allowed tool, prohibited outcome, protected resource, approval gate, and completion condition.
+2. Validate event parent references and walk ancestry in sequence order.
+3. Treat tool proposals, authorization-relevant state mutations, and final answers as consequential events.
+4. Bind each consequential event to the contract clauses it advances or constrains.
+5. Mark the earliest event `divergent` when an unauthorized tool or resource, missing approval, untrusted control ancestry, prohibited flow, or unsupported completion is observed.
+6. Mark a consequential action `unbound` when no clause or validated decision record justifies it.
+7. Calculate intent-clause coverage as clauses with at least one validated binding divided by all compiled contract clauses. Report unbound consequential actions separately; coverage is not a safety score.
+
+The first divergence is deterministic and evidence-linked. Semantic model analysis may add an explanation, but it cannot move the divergence point, create a missing event, or change an aligned/divergent verdict.
+
 ## 3. SDK interface
 
 The SDK exposes `start_execution(intent, policy_mode)`, `span(name, attributes)`, `record_retrieval(document)`, `propose_tool(name, arguments)`, `record_policy_decision(decision)`, `record_tool_result(result)`, `record_state_change(before, after)`, and `finish_execution(output, status)`. A `@trace_tool` decorator records proposals, decisions, results, timing, and exceptions. Context variables propagate execution and parent identifiers across asynchronous calls.
@@ -66,9 +80,11 @@ The GPT-5.6 detector receives event summaries and the intent contract. Its outpu
 
 A replay fixture is a version-controlled YAML or JSON file containing the user request, injected document, tool catalog, simulated results, expected vulnerable outcome, and expected protected outcome. Replay creates a new execution, copies no sensitive runtime payloads, fixes time and random seed where needed, and disables network access in tool adapters. A comparison service aligns events by semantic step rather than sequence number and reports changed decisions, calls, findings, and final outcomes.
 
+The comparison service also creates a `PromotionGate`. `promote` requires an exact recorded fixture-digest link, no candidate first divergence, no new deterministic rules, behavior-specific satisfied evidence for every baseline-divergent clause, and no unbound candidate consequential action. Application-asserted clause IDs count as observed, not satisfied. Any failed condition yields `hold` with machine-readable regressions. This result is suitable for a CI check or software-factory promotion stage; it is not permission for a model to edit or deploy production code autonomously.
+
 ## 8. API contract
 
-`POST /api/v1/executions` creates a run. `POST /api/v1/executions/{id}/events` appends one or more events. `POST /api/v1/executions/{id}/complete` seals the trace. `POST /api/v1/executions/{id}/analyze` runs analysis. `GET /api/v1/executions/{id}` returns summary data. `GET /api/v1/executions/{id}/events` supports pagination and type filters. `GET /api/v1/executions/{id}/findings` returns findings. `POST /api/v1/executions/{id}/replays` starts replay under a policy version. `GET /api/v1/comparisons/{left}/{right}` returns aligned results. `GET /api/v1/executions/{id}/report` exports Markdown or JSON.
+`POST /api/v1/executions` creates a run. `POST /api/v1/executions/{id}/events` appends an event. `POST /api/v1/executions/{id}/complete` seals the trace. `GET /api/v1/executions/{id}` returns the run. `GET /api/v1/executions/{id}/intent-flight-record` returns clauses, bindings, the causal chain, explicit decision records, coverage, and first divergence. `POST /api/v1/executions/{id}/analyze/live` runs optional semantic analysis. `GET /api/v1/comparisons/{left}/{right}` returns changed decisions, resolved findings, and the promotion gate. `GET /api/v1/executions/{id}/report` exports Markdown or JSON.
 
 All mutation endpoints accept an idempotency key. Errors use a stable envelope with code, message, correlation identifier, and field details. Raw secret fields are never returned unless the local demo explicitly enables a synthetic-data reveal toggle.
 

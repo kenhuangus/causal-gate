@@ -2,7 +2,9 @@
 
 ## 1. Mission
 
-Implement AgentFlight Recorder as a working, testable Developer Tools submission for OpenAI Build Week. The product records tool-using agent executions, reconstructs evidence-linked security failures, compares behavior with a versioned intent contract, and replays the same scenario after a policy change. The demonstration must move from an authorized research task to a detected protected-data egress path, then to a protected replay that blocks the action.
+Implement AgentFlight Recorder as a working, testable intent-assurance tool for AI engineers and software factories. The product must produce an Intent Flight Record connecting a versioned intent contract to explicit plan and decision summaries, consequential actions, state, evidence, and outcomes; identify the first deterministic divergence; and replay the same scenario to issue an evidence-gated promotion decision. The demonstration must move from authorized research intent to the first unjustified decision, through the protected-data egress chain, and finally to a protected replay that restores intent alignment.
+
+This product does not capture hidden chain-of-thought. Preserve that boundary in code, copy, screenshots, and submission materials. Only application-emitted decision summaries, alternatives, confidence, evidence references, and clause bindings may be described as captured reasoning context.
 
 This repository is independent from AI Engineering Book Lab. Do not import its packages, schemas, fixtures, database, interface, copy, screenshots, or video assets. AgentFlight Recorder is an investigation and verification product for engineers; it is not a learning platform.
 
@@ -12,7 +14,7 @@ Before changing code, read `PRD.md`, `ARCHITECTURE.md`, and `DETAIL-DESIGN.md` i
 
 ## 3. Product outcome
 
-A developer must be able to instrument an agent, run or import a trace, inspect a finding linked to immutable event evidence, replay the scenario under a changed policy, and use the same result as a local CLI or CI security gate. The hosted judge path must work without signup. The local path must work through Docker Compose. A deterministic keyless mode must remain functional when OpenAI Platform access is unavailable.
+A developer must be able to instrument an agent, inspect the Intent Flight Record and its first divergence, replay the scenario under a candidate policy or code revision, and use the resulting promotion gate in local development, CI, or a software-factory pipeline. The hosted judge path must work without signup. The local path must work through Docker Compose. A deterministic keyless mode must remain functional when OpenAI Platform access is unavailable.
 
 ## 4. Release scope
 

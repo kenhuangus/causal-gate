@@ -8,6 +8,10 @@ PATTERNS = [
     re.compile(r"sk-[A-Za-z0-9_-]{8,}"),
     re.compile(r"(?i)bearer\s+[A-Za-z0-9._-]+"),
 ]
+PROTECTED_STRUCTURAL_KEYS = {
+    "tool", "blocked", "outbound", "protected_read", "decision", "outcome",
+    "rule", "field", "prevented_by_event_id", "intent_clause_ids", "evidence_event_ids",
+}
 
 
 def redact(value: Any) -> Any:
@@ -31,5 +35,8 @@ def redacted_event_payload(payload: dict[str, Any], sensitivity: list[str]) -> d
     """Build the only payload representation safe to return through the API."""
     value = redact(payload)
     if "protected" in sensitivity:
-        return {key: "[PROTECTED]" for key in value}
+        return {
+            key: item if key in PROTECTED_STRUCTURAL_KEYS else "[PROTECTED]"
+            for key, item in value.items()
+        }
     return value

@@ -7,7 +7,7 @@ import time
 from collections import OrderedDict
 from pathlib import Path
 
-from .models import Event, Execution
+from .models import Event, EventType, Execution
 from .redaction import redacted_event_payload
 
 
@@ -231,8 +231,18 @@ class TraceStore:
     def _validate_append(run: Execution, event: Event) -> None:
         if event.execution_id != run.id or event.sequence != len(run.events) + 1:
             raise ValueError("execution or sequence mismatch")
-        if event.parent_id and event.parent_id not in {existing.id for existing in run.events}:
+        existing_ids = {existing.id for existing in run.events}
+        if event.parent_id and event.parent_id not in existing_ids:
             raise ValueError("parent must reference an earlier event in this execution")
+        if event.type in {EventType.PLAN, EventType.DECISION}:
+            from .flight_record import intent_clauses
+
+            evidence_ids = set(event.payload.get("evidence_event_ids", []))
+            if evidence_ids - existing_ids:
+                raise ValueError("evidence must reference earlier events in this execution")
+            valid_clause_ids = {clause.id for clause in intent_clauses(run.intent)}
+            if set(event.payload.get("intent_clause_ids", [])) - valid_clause_ids:
+                raise ValueError("intent clause does not exist in this execution contract")
 
     def seal(self, execution_id: str) -> Execution:
         run = self.get(execution_id)

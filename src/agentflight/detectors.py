@@ -39,7 +39,23 @@ def unsafe_chain(run: Execution) -> list[Finding]:
 def source_confusion(run: Execution) -> list[Finding]:
     injected = [e for e in run.events if e.type == EventType.RETRIEVAL and e.provenance.startswith("untrusted") and any(token in str(e.payload.get("document", "")).lower() for token in ("system override", "ignore previous", "send it externally"))]
     injected_ids = {e.id for e in injected}
-    influenced = [e for e in run.events if e.type == EventType.TOOL_PROPOSAL and e.parent_id in injected_ids and not e.payload.get("blocked")]
+    event_by_id = {event.id: event for event in run.events}
+
+    def descends_from_injection(event: Event) -> bool:
+        seen: set[str] = set()
+        parent_id = event.parent_id
+        while parent_id and parent_id not in seen:
+            if parent_id in injected_ids:
+                return True
+            seen.add(parent_id)
+            parent = event_by_id.get(parent_id)
+            parent_id = parent.parent_id if parent else None
+        return False
+
+    influenced = [
+        e for e in run.events
+        if e.type == EventType.TOOL_PROPOSAL and descends_from_injection(e) and not e.payload.get("blocked")
+    ]
     return [_finding(run, "AFR-SOURCE-001", "Untrusted content influenced control flow", "high", injected[-1:] + influenced[-1:],
                      "A retrieved instruction influenced a protected action.", "Treat retrieved text as data and enforce instruction provenance.")] if injected and influenced else []
 
@@ -51,14 +67,20 @@ def goal_drift(run: Execution) -> list[Finding]:
 
 
 def privilege_escalation(run: Execution) -> list[Finding]:
-    bad = [e for e in run.events if e.type == EventType.TOOL_PROPOSAL and e.payload.get("arguments", {}).get("resource") in run.intent.protected_resources and not e.payload.get("blocked")]
+    bad = [
+        e for e in run.events
+        if e.type == EventType.TOOL_PROPOSAL
+        and isinstance(e.payload.get("arguments", {}), dict)
+        and e.payload.get("arguments", {}).get("resource") in run.intent.protected_resources
+        and not e.payload.get("blocked")
+    ]
     return [_finding(run, "AFR-PRIV-001", "Unapproved privilege escalation", "critical", bad,
                      "The run moved to a higher-privilege resource without authorization.", "Bind tool credentials and resource scope to the intent contract.")] if bad else []
 
 
 def unsafe_state(run: Execution) -> list[Finding]:
     untrusted = {e.id for e in run.events if e.provenance.startswith("untrusted")}
-    bad = [e for e in run.events if e.type == EventType.STATE_MUTATION and e.parent_id in untrusted and e.payload.get("field") in {"authorized_tools", "trusted_instruction", "approval_state"} and not e.payload.get("blocked")]
+    bad = [e for e in run.events if e.type in {EventType.STATE_MUTATION, EventType.PLAN} and e.parent_id in untrusted and e.payload.get("field") in {"authorized_tools", "trusted_instruction", "approval_state"} and not e.payload.get("blocked")]
     return [_finding(run, "AFR-STATE-001", "Untrusted authorization state mutation", "high", bad,
                      "Untrusted content entered durable authorization-relevant state.", "Validate provenance before durable state writes.")] if bad else []
 

@@ -4,6 +4,7 @@ import sqlite3
 from fastapi.testclient import TestClient
 
 from agentflight.api import create_app
+from agentflight.flight_record import intent_clauses
 from agentflight.models import Event, EventType, Execution
 from agentflight.storage import TraceStore
 
@@ -47,6 +48,48 @@ def test_parent_must_be_earlier_same_run(monkeypatch):
     assert response.status_code == 422
 
 
+def test_decision_evidence_and_intent_clauses_must_resolve_in_same_run(monkeypatch):
+    monkeypatch.setenv("AGENTFLIGHT_DEMO_MODE", "false")
+    monkeypatch.setenv("AGENTFLIGHT_ADMIN_TOKEN", "test-admin-token")
+    client = TestClient(create_app(TraceStore(":memory:")))
+    run = _created(client)
+    intent_event = Event(
+        execution_id=run["id"], sequence=1, type=EventType.USER_INTENT, actor="user",
+        payload={"goal": "summarize"}, idempotency_key="intent-proof-001",
+    )
+    assert client.post(
+        f"/api/v1/executions/{run['id']}/events",
+        json=intent_event.model_dump(mode="json"),
+        headers={**ADMIN, "Idempotency-Key": intent_event.idempotency_key},
+    ).status_code == 200
+    valid_clause = intent_clauses(Execution.model_validate(run).intent)[0].id
+    base_payload = {
+        "summary": "Use the authorized lookup path.", "subgoal_id": "summary.lookup",
+        "intent_clause_ids": [valid_clause], "evidence_event_ids": ["evt_other_run"],
+        "alignment": "aligned", "proposed_tools": ["lookup"],
+    }
+    bad_evidence = Event(
+        execution_id=run["id"], sequence=2, type=EventType.PLAN, actor="agent",
+        payload=base_payload, idempotency_key="intent-proof-002",
+    )
+    response = client.post(
+        f"/api/v1/executions/{run['id']}/events",
+        json=bad_evidence.model_dump(mode="json"),
+        headers={**ADMIN, "Idempotency-Key": bad_evidence.idempotency_key},
+    )
+    assert response.status_code == 422
+    bad_clause = bad_evidence.model_copy(deep=True)
+    bad_clause.idempotency_key = "intent-proof-003"
+    bad_clause.payload["evidence_event_ids"] = [intent_event.id]
+    bad_clause.payload["intent_clause_ids"] = ["intent_goal_not_in_contract"]
+    response = client.post(
+        f"/api/v1/executions/{run['id']}/events",
+        json=bad_clause.model_dump(mode="json"),
+        headers={**ADMIN, "Idempotency-Key": bad_clause.idempotency_key},
+    )
+    assert response.status_code == 422
+
+
 def test_public_demo_mode_blocks_general_trace_api():
     client = TestClient(create_app(TraceStore(":memory:")))
     assert client.get("/api/v1/executions").status_code == 403
@@ -63,6 +106,10 @@ def test_private_execution_reads_and_reports_require_admin(monkeypatch):
     assert client.get(f"/api/v1/executions/{run['id']}/report").status_code == 401
     assert client.get(f"/api/v1/executions/{run['id']}", headers=ADMIN).status_code == 200
     assert client.get(f"/api/v1/executions/{run['id']}/report", headers=ADMIN).status_code == 200
+    assert client.get(f"/api/v1/executions/{run['id']}/flight-record").status_code == 401
+    flight_record = client.get(f"/api/v1/executions/{run['id']}/flight-record", headers=ADMIN)
+    assert flight_record.status_code == 200
+    assert flight_record.json()["execution_id"] == run["id"]
 
 
 def test_stream_body_limit():

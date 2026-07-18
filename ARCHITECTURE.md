@@ -28,11 +28,13 @@ The intent service converts user instructions and developer policy into an `Inte
 
 The analysis engine runs deterministic rules first, then sends a minimized trace projection to GPT-5.6. It validates model output, verifies every cited event identifier, merges duplicate findings, and records analysis provenance.
 
+The intent-proof engine compiles a contract into stable clauses, reconstructs each event's causal ancestry, and binds consequential actions to the clauses that authorize or constrain them. It emits an `IntentFlightRecord` containing explicit decision records, coverage, unbound actions, and the earliest deterministic divergence. It does not infer private chain-of-thought; it analyzes only recorded application events and contract fields.
+
 The policy engine evaluates proposed tool calls before execution. Baseline mode records violations but permits seeded demo behavior. Protected mode denies violations or requests approval. This behavior is explicit in the user interface to avoid presenting monitoring as enforcement.
 
 The replay runner loads immutable fixtures, replaces side-effecting tools with simulators, and executes the same task and retrieved content under a selected policy version. It links the new execution to its source execution.
 
-The dashboard provides run selection, an execution timeline, intent-contract display, finding details, an attack-path view, raw event inspection, and baseline-versus-protected comparison.
+The dashboard provides run selection, an Intent Flight Record, a first-divergence view, intent-contract display, finding details, causal event inspection, and baseline-versus-protected comparison with a promotion gate.
 
 ## 4. Runtime flow
 
@@ -54,11 +56,26 @@ sequenceDiagram
 
 ## 5. Data model
 
-`Execution` contains identity, status, policy mode, framework, timestamps, source execution for replay, and aggregate risk. `TraceEvent` contains execution identity, sequence, event type, actor, parent, payload, redacted payload, provenance, sensitivity, and timestamp. `IntentContract` contains goals, prohibitions, tools, resources, approval gates, completion conditions, model provenance, and version. `Finding` contains detector identity, severity, confidence, workflow status, owner, summary, evidence event identifiers, mappings, mitigation note, and recommendation. `PolicyDecision` contains proposed action, matched rules, decision, reason, and approval state. `ReplayFixture` contains initial request, retrieved documents, simulated tool outputs, random seed, labels, and expected assertions. `BenchmarkRun` records suite version, code revision, configuration, aggregate metrics, and per-scenario results.
+`Execution` contains identity, status, policy mode, framework, timestamps, source execution for replay, and aggregate risk. `TraceEvent` contains execution identity, sequence, event type, actor, parent, payload, redacted payload, provenance, sensitivity, and timestamp. `IntentContract` contains goals, prohibitions, tools, resources, approval gates, completion conditions, model provenance, and version. `IntentClause` gives each contract constraint a stable identifier. `IntentBinding` records whether a consequential event is aligned, divergent, or unbound and cites its clauses. `IntentFlightRecord` contains causal event identifiers, explicit decision records, coverage, unbound actions, and the first divergence. `Finding` contains detector identity, severity, evidence event identifiers, and recommendation. `PromotionGate` records `promote` or `hold`, restored clauses, regressions, and evidence. `ReplayFixture` contains the seeded task and simulated outputs. `BenchmarkRun` records suite version and per-scenario results.
 
 ## 6. API boundaries
 
-The shipped API exposes health, the synthetic baseline/protected demo and reset, fixture-scoped execution retrieval and report export, deterministic comparison, benchmark output, the verified recorded-analysis artifact, and an opt-in live-analysis request. In private ingestion mode it additionally exposes create, append, complete, and list endpoints behind an administrator token; event ingestion accepts idempotency keys. Job queues, finding assignment, and asynchronous workers are target-production extensions, not shipped endpoints.
+The shipped API exposes health, the synthetic baseline/protected demo and reset, fixture-scoped execution retrieval, `GET /api/v1/executions/{id}/intent-flight-record`, report export, deterministic comparison with a promotion gate, benchmark output, the verified recorded-analysis artifact, and an opt-in live-analysis request. In private ingestion mode it additionally exposes create, append, complete, and list endpoints behind an administrator token; event ingestion accepts idempotency keys. Job queues, finding assignment, and asynchronous workers are target-production extensions, not shipped endpoints.
+
+## 6.1 Evidence-gated improvement loop
+
+```mermaid
+flowchart TD
+    I["Intent contract"] --> R["Recorded decision and action chain"]
+    R --> D["First divergence"]
+    D --> C["Candidate code or policy change"]
+    C --> P["Sandbox fixture replay"]
+    P --> G{"Promotion gate"}
+    G -->|proof passes| M["Promote"]
+    G -->|divergence or regression| H["Hold and revise"]
+```
+
+In a recursive AI-engineering loop, a coding agent may consume the failure record and propose a change. It cannot approve its own proposal. The deterministic gate requires fixture parity, intent restoration, and absence of new findings. This provides a bounded control loop for software factories without claiming safe autonomous self-improvement in open environments.
 
 ## 7. Deployment
 

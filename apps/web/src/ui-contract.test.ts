@@ -37,6 +37,24 @@ describe('judge UI contracts',()=>{
     expect(source).not.toContain('Run 12-event baseline');
   });
 
+  it('presents intent evidence without implying access to hidden reasoning',()=>{
+    expect(source).toContain('/intent-flight-record');
+    for(const copy of ['INTENT FLIGHT RECORD','FIRST DIVERGENCE','CLAUSE REGISTER','STRUCTURED DECISIONS','CAUSAL CHAIN','UNBOUND ACTIONS']){
+      expect(source).toContain(copy);
+    }
+    expect(source).toContain('Application-provided summaries');
+    expect(source).toContain('Hidden model reasoning or chain-of-thought is not captured');
+    expect(styles).toContain('.intent-flight-card');
+  });
+
+  it('shows an evidence-gated software factory promotion decision',()=>{
+    for(const contract of ['promotion_gate','restored_clause_ids','regressions','SOFTWARE FACTORY GATE','Evidence-gated, not score-gated']){
+      expect(source).toContain(contract);
+    }
+    expect(source).toContain('not a general production-safety certification');
+    expect(styles).toContain('.promotion-gate');
+  });
+
   it('is self-contained and includes resilient accessibility media rules',()=>{
     expect(styles).not.toMatch(/@import|https?:\/\//);
     expect(styles).toContain('min-width:320px');

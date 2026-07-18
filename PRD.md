@@ -2,17 +2,17 @@
 
 ## 1. Product summary
 
-AgentFlight Recorder is a developer tool for recording, replaying, and analyzing AI-agent executions. It captures user intent, model decisions, tool calls, state mutations, approvals, outputs, and security-relevant events in a normalized trace. Deterministic rules identify concrete policy violations; optional GPT-5.6 analysis interprets intent divergence and prompt-injection influence when Platform access is configured. The product produces an evidence-linked incident report and lets a developer replay the execution after applying a control.
+AgentFlight Recorder is an intent-assurance tool for AI engineers and software factories. It converts an agent execution into an Intent Flight Record that binds a declared intent contract to explicit plans, application-provided decision summaries, tool calls, state mutations, approvals, evidence, and outcomes. It deterministically identifies the first consequential event whose authorization chain diverges from the contract, then replays the same fixture and issues a promotion decision for a candidate control.
 
 The hackathon submission targets the Developer Tools category. The submission supports OpenAI Agents SDK and LangGraph integrations, an intentionally vulnerable demonstration agent, eight detector classes, a hosted dashboard, CLI and CI workflows, a local Docker fallback, and repeatable attack–detect–repair–verify demonstrations.
 
 ## 1.1 Track fit and one-sentence value proposition
 
-AgentFlight Recorder fits the Developer Tools objective because it is a testable security and agentic-workflow tool used by developers during development and incident review. Its value proposition is: **turn an opaque agent run into an evidence-linked attack path, then prove a control works by replaying the same run**. The submission shall describe it as a developer security instrument, not as a general monitoring dashboard or a security standard.
+AgentFlight Recorder fits the Developer Tools objective because it closes the loop between agent debugging and safe improvement. Its value proposition is: **prove where an agent first departed from declared intent, then prove a revision restores that intent before promotion**. The submission shall describe it as an intent-assurance and change-verification instrument, not as a general monitoring dashboard or a security standard.
 
 ## 2. Problem
 
-Agent traces usually show what happened but do not establish whether each action remained within the user's original authorization. Developers must manually correlate prompts, retrieved content, state, tool calls, and approvals. This makes indirect prompt injection and cross-tool escalation difficult to diagnose and reproduce.
+Agent traces usually show what happened but do not establish why a consequential action was believed to be authorized, which clause of the user's intent justified it, or where that justification first became invalid. Developers must manually correlate prompts, retrieved content, explicit decisions, state, tools, approvals, and outcomes. A software factory has an additional problem: even after generating a fix, it needs evidence that the revision restored intent alignment without introducing a regression.
 
 ## 3. Target users
 
@@ -22,7 +22,7 @@ The primary user is an AI engineer building tool-using agents. Secondary users a
 
 The release must capture complete execution traces, make them understandable, detect eight security conditions, generate evidence-grounded findings, replay recorded scenarios, demonstrate that mitigations change outcomes, and operate as both a local development tool and CI security gate. It must offer a testing path that does not require judges to rebuild the project.
 
-The release will not provide a production SIEM, autonomous remediation in production, universal framework support, or formal compliance certification. AIVSS and MAESTRO mappings are explanatory metadata, not certification claims.
+The release will not provide a production SIEM, autonomous remediation in production, uncontrolled self-modification, universal framework support, or formal compliance certification. It does not capture or reconstruct hidden chain-of-thought. It records only application-emitted plan and decision summaries and treats them as untrusted evidence. AIVSS and MAESTRO mappings are explanatory metadata, not certification claims.
 
 ## 5. Core user journey
 
@@ -72,11 +72,23 @@ The command-line interface shall run a scenario suite, analyze imported traces, 
 
 ### FR-11 Security benchmark suite
 
-The repository shall include at least thirty synthetic, versioned scenarios across the eight detector classes, including benign near-miss cases. The benchmark runner shall report detector precision and recall on labeled fixtures, replay determinism, runtime overhead, and GPT-5.6 evidence-citation validity. Results shall identify fixture count and version and shall not be generalized beyond the included suite.
+The repository shall include at least thirty synthetic, versioned scenarios across the eight detector classes, including target-rule-negative near-miss cases. A target-rule-negative trace may retain violations for other detector classes. The benchmark runner shall report per-rule precision and recall on labeled fixtures, replay determinism, runtime overhead, and GPT-5.6 evidence-citation validity. Results shall identify fixture count and version and shall not be generalized beyond the included suite.
 
 ### FR-12 Team investigation workflow
 
 Users shall be able to assign a finding status, add a mitigation note, compare policy versions, and export a shareable evidence package. The release may use a single workspace and lightweight local identities; full enterprise identity management is outside scope.
+
+### FR-13 Intent Flight Record
+
+The system shall compile the intent contract into stable clause identifiers and bind consequential events to one or more clauses. The record shall include the causal chain, explicit plan and decision records, intent coverage, unbound consequential actions, the first divergence event, and a human-readable divergence reason. Parent ancestry and evidence identifiers must resolve within the same execution.
+
+### FR-14 Explicit decision records
+
+Applications may emit `plan` and `decision` events containing a concise rationale summary, alternatives considered, confidence, cited evidence-event identifiers, and referenced intent-clause identifiers. These fields shall be labeled as application-provided summaries. The product shall never describe them as hidden model reasoning or chain-of-thought, and missing summaries shall not be synthesized as if observed.
+
+### FR-15 Evidence-gated improvement
+
+Comparison shall treat a protected or revised run as a promotion candidate. The candidate may receive `promote` only when it uses the identical fixture, has no first intent divergence, introduces no deterministic findings, and resolves the baseline's divergent clauses. Otherwise the verdict is `hold`, with cited reasons and regression evidence. Model analysis may propose or explain a change but cannot issue the promotion verdict.
 
 ## 7. Security and privacy requirements
 
@@ -132,6 +144,18 @@ The panel review sets the priority order to: reliable hosted journey, evidence-l
 ## 13. Review sources
 
 The panel names and roles are published on the [OpenAI Build Week page](https://openai.devpost.com/). Product emphasis was informed by [Kath Korevec's description of her developer-product work](https://kathykorevec.substack.com/about), [Tara Seshan's public profile](https://www.linkedin.com/in/tarstarr), [Leah Belsky's education profile](https://asugsvsummit.com/speakers/leah-belsky), a [profile of Thibault Sottiaux's product responsibilities](https://www.wired.com/story/model-behavior-interview-with-openai-codex-lead-tibo-sottiaux), and [Peter Steinberger's discussion of building with Codex](https://www.linkedin.com/posts/romainhuet_excited-to-share-this-conversation-with-peter-activity-7432440027667812352-zL1H). The documents use these sources only to identify plausible evaluation perspectives.
+
+## 13.1 Competitive boundary
+
+This positioning is based on current official product documentation, not a claim that competing platforms cannot be extended.
+
+| Product | Officially documented center of gravity | AgentFlight's deliberately narrower differentiation |
+| --- | --- | --- |
+| [LangSmith Observability](https://docs.langchain.com/langsmith/observability) | Trace visibility, production metrics, dashboards, and agent debugging | Stable intent-clause bindings, a deterministic first authorization divergence, and an evidence-gated revision verdict |
+| [Langfuse Observability](https://langfuse.com/docs/observability/overview) | Full request lifecycle, tool and retrieval relationships, sessions, cost, latency, and attributes | An intent proof that requires every consequential action to justify itself against the declared contract |
+| [Arize Phoenix Tracing](https://arize.com/docs/phoenix/tracing/concepts-tracing/what-are-traces) | LLM, tool, agent, and chain spans plus evaluation and trace analysis | A software-factory control loop that turns the first divergence and same-fixture replay into `promote` or `hold` |
+
+AgentFlight should integrate with or ingest conventional traces rather than compete on telemetry breadth. Its novelty claim rests on the contract-to-decision-to-action proof and conservative promotion gate. If those artifacts are absent, the product has fallen back to ordinary observability and has missed its product objective.
 
 ## 14. Scope and release gates
 

@@ -1,6 +1,10 @@
 # AgentFlight Recorder
 
-AgentFlight Recorder turns a tool-using AI-agent run into an evidence-linked security investigation and replays the identical scenario under a changed policy. The included judge path is deterministic, uses synthetic data, makes no network calls, and requires no OpenAI API key.
+AgentFlight Recorder turns a tool-using AI-agent run into an **Intent Flight Record**: a causal proof connecting the declared intent to explicit plans, application-provided decision summaries, tool calls, state changes, and the final outcome. It identifies the first consequential event that cannot be justified by the intent contract, then replays the identical scenario to decide whether a proposed control is safe to promote.
+
+This is not another trace viewer. Traces answer what happened; AgentFlight answers which intent clause authorized an action, where that authorization chain first broke, and whether a candidate change restored the intended behavior without a detected regression. The included judge path is deterministic, uses synthetic data, makes no network calls, and requires no OpenAI API key.
+
+AgentFlight never claims access to hidden model chain-of-thought. `plan` and `decision` events are explicit records emitted by the application: concise rationale summaries, considered alternatives, confidence, cited evidence events, and referenced intent clauses. They are inspectable engineering artifacts, not private model reasoning.
 
 ## Judge quickstart
 
@@ -8,7 +12,7 @@ AgentFlight Recorder turns a tool-using AI-agent run into an evidence-linked sec
 docker compose up --build --wait
 ```
 
-Open `http://localhost:8080`, select **Run vulnerable scenario**, inspect a finding, then select **Replay with protection**. The baseline run seeds eight documented security conditions. The protected replay uses the same fixture hash and blocks the unauthorized read before synthetic data can reach the simulated outbound tool.
+Open `http://localhost:8080`, select **Run vulnerable scenario**, inspect the first divergence in the Intent Flight Record, then select **Replay with protection**. The baseline run seeds eight documented security conditions. The protected replay uses the same fixture hash, blocks the unauthorized read before synthetic data can reach the simulated outbound tool, and produces an evidence-gated promotion decision.
 
 Without Docker:
 
@@ -27,7 +31,7 @@ make verify-adapters
 make verify-release
 ```
 
-`make verify-demo` runs the Python tests and end-to-end CLI assertion. `make verify-release` adds the benchmark, adapter, recorded-artifact, and production frontend checks. The 32-case labeled benchmark consists of two adversarial and two benign near-miss variants for each of the eight detector classes. Reported precision and recall apply only to this synthetic suite.
+`make verify-demo` runs the Python tests and end-to-end CLI assertion. `make verify-release` adds the benchmark, adapter, recorded-artifact, and production frontend checks. The 32-case labeled benchmark consists of two target-rule-positive and two target-rule-negative variants for each detector class; a target-rule-negative trace may still contain other seeded violations. Reported precision and recall apply only to this synthetic suite.
 
 ## SDK integration
 
@@ -64,6 +68,12 @@ The GitHub Actions workflow executes the complete keyless verification path. It 
 The FastAPI service serves both the versioned API and the React investigation interface. SQLite provides a zero-configuration local profile. Cloud Run can deploy the same container; Cloud SQL and a private worker are the documented scale-out path. Trace capture, redaction, deterministic analysis, replay, report export, and adapters are separate modules with strict Pydantic contracts.
 
 The eight rules are protected-data egress, missing approval, unsafe tool chaining, instruction-source confusion, goal drift, privilege escalation, unsafe authorization-state mutation, and unsupported completion. Every finding cites event identifiers validated against its execution.
+
+The intent-analysis layer compiles each contract into stable clause identifiers, binds consequential events to those clauses, walks parent links to reconstruct the causal chain, and returns intent coverage plus the first divergence. Baseline-versus-candidate comparison is therefore useful in an AI-engineering or software-factory loop:
+
+`intent contract → decision record → action chain → first divergence → candidate control → fixture replay → promotion gate`
+
+The gate is deliberately conservative: model-generated explanations or code changes cannot promote themselves. Promotion requires fixture parity, restored intent clauses, no detected candidate divergence, and no new deterministic findings.
 
 ## Security model
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 
 from .demo import run_demo
@@ -84,13 +85,25 @@ def _case(rule: str, attack: bool, variant: int) -> Execution:
     elif rule == "AFR-PRIV-001" and not attack:
         run.intent.protected_resources = [f"different-resource-{variant}"]
     elif rule == "AFR-STATE-001" and not attack:
-        state = next(e for e in run.events if e.type == EventType.STATE_MUTATION)
+        state = next(e for e in run.events if e.type in {EventType.STATE_MUTATION, EventType.PLAN} and e.payload.get("field"))
         state.payload["field"] = f"display_preference_{variant}"
     elif rule == "AFR-COMPLETE-001" and not attack:
         final = next(e for e in run.events if e.type == EventType.FINAL_ANSWER)
         final.payload["evidence"] = list(run.intent.completion_conditions)
     id_to_sequence = {e.id: e.sequence for e in run.events}
-    digest_body = "|".join(f"{e.type}:{e.provenance}:{id_to_sequence.get(e.parent_id)}:{e.payload}" for e in run.events) + run.intent.model_dump_json()
+    stable_events = []
+    for event in run.events:
+        payload = dict(event.payload)
+        if isinstance(payload.get("evidence_event_ids"), list):
+            payload["evidence_event_ids"] = [
+                id_to_sequence.get(event_id, event_id)
+                for event_id in payload["evidence_event_ids"]
+            ]
+        stable_events.append(
+            f"{event.type}:{event.provenance}:{id_to_sequence.get(event.parent_id)}:"
+            f"{json.dumps(payload, sort_keys=True, separators=(',', ':'))}"
+        )
+    digest_body = "|".join(stable_events) + run.intent.model_dump_json()
     run.fixture_hash = hashlib.sha256(digest_body.encode()).hexdigest()[:16]
     run.findings = analyze(run)
     return run
