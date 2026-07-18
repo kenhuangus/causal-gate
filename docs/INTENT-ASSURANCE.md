@@ -63,19 +63,19 @@ This is recursive improvement with an external evidence gate, not uncontrolled r
 
 Otherwise the verdict is `hold`. The gate reports missing conditions and regressions rather than collapsing them into a score.
 
-The prototype proves these semantics on a synthetic prompt-injection fixture. It does not establish that an untested production revision is safe, that the detector set is complete, or that a passing fixture authorizes deployment.
+The prototype demonstrates these configured semantics on synthetic prompt-injection fixtures. It does not establish that an untested production revision is safe, that the detector set is complete, or that a passing fixture authorizes deployment.
 
 ## Competitive boundary
 
 Current official documentation positions [LangSmith](https://docs.langchain.com/langsmith/observability) around trace visibility and production observability, [Langfuse](https://langfuse.com/docs/observability/overview) around the full LLM request lifecycle and causal trace relationships, and [Arize Phoenix](https://arize.com/docs/phoenix/tracing/concepts-tracing/what-are-traces) around LLM/tool/agent spans, analysis, and evaluation. Those products provide valuable telemetry that AgentFlight can ingest or complement.
 
-AgentFlight's deliberately narrow novelty claim is not better span collection. It is the combination of stable intent clauses, explicit decision artifacts, deterministic first-divergence analysis, and a same-fixture promotion gate. If AgentFlight only displays traces and findings, it is not meaningfully differentiated.
+AgentFlight's deliberately narrow novelty claim is not better span collection. It is the combination of canonical intent clauses, versioned conformance evaluations, explicit decision artifacts, a causal-minimal divergence frontier, and authenticated replay-suite evidence. If AgentFlight only displays traces and findings, it is not meaningfully differentiated.
 
 ## Design invariants
 
 - Behavior outranks rationale: a decision summary cannot make an unauthorized action authorized.
 - Missing evidence stays missing: no synthetic explanation is presented as observed reasoning.
-- Earliest cause over loudest symptom: the first divergence is ordered by the recorded causal execution, not finding severity.
-- Same-fixture proof: a changed outcome is comparable only when the fixture digest matches and the candidate replay link names it. This is recorded provenance, not cryptographic attestation of an external runner.
+- Causal frontier over loudest symptom: every detected violation without a detected violating causal ancestor is retained; concurrent branches are not forced into a false causal order.
+- Same-fixture evidence: a changed outcome is comparable only when the fixture digest matches and the candidate replay link names it. A software-factory recommendation additionally requires the authenticated multi-fixture gate.
 - Independent gate: semantic model output cannot issue, suppress, or alter the promotion verdict.
 - Bounded claims: synthetic benchmark metrics describe only the checked-in suite.

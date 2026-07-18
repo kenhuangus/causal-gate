@@ -4,6 +4,8 @@ services:
     ports: ["8080:8080"]
     environment:
       AGENTFLIGHT_DB: /data/agentflight.db
+      AGENTFLIGHT_ATTESTATION_KEY: ${AGENTFLIGHT_ATTESTATION_KEY:?set a 32-byte assurance-suite key}
+      AGENTFLIGHT_RUNNER_IDENTITY: local-docker-runner
     volumes: ["agentflight-data:/data"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
@@ -12,4 +14,3 @@ services:
       retries: 10
 volumes:
   agentflight-data:
-

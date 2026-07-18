@@ -234,6 +234,18 @@ class TraceStore:
         existing_ids = {existing.id for existing in run.events}
         if event.parent_id and event.parent_id not in existing_ids:
             raise ValueError("parent must reference an earlier event in this execution")
+        if set(event.causal_predecessor_ids) - existing_ids:
+            raise ValueError("causal predecessors must reference earlier events in this execution")
+        causal_sources = set(event.causal_predecessor_ids)
+        if event.parent_id:
+            causal_sources.add(event.parent_id)
+        predecessor_clocks = [
+            existing.logical_clock or existing.sequence
+            for existing in run.events
+            if existing.id in causal_sources
+        ]
+        if event.logical_clock is not None and predecessor_clocks and event.logical_clock <= max(predecessor_clocks):
+            raise ValueError("logical clock must advance beyond every causal predecessor")
         if event.type in {EventType.PLAN, EventType.DECISION}:
             from .flight_record import intent_clauses
 

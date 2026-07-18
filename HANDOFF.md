@@ -4,7 +4,7 @@
 
 Implement AgentFlight Recorder as a working, testable intent-assurance tool for AI engineers and software factories. The product must produce an Intent Flight Record connecting a versioned intent contract to explicit plan and decision summaries, consequential actions, state, evidence, and outcomes; identify the first deterministic divergence; and replay the same scenario to issue an evidence-gated promotion decision. The demonstration must move from authorized research intent to the first unjustified decision, through the protected-data egress chain, and finally to a protected replay that restores intent alignment.
 
-This product does not capture hidden chain-of-thought. Preserve that boundary in code, copy, screenshots, and submission materials. Only application-emitted decision summaries, alternatives, confidence, evidence references, and clause bindings may be described as captured reasoning context.
+This product does not capture hidden chain-of-thought. Preserve that boundary in code, copy, screenshots, and submission materials. Only application-emitted decision summaries, alternatives, self-reported uncalibrated confidence, evidence references, and clause bindings may be described as captured reasoning context.
 
 This repository is independent from AI Engineering Book Lab. Do not import its packages, schemas, fixtures, database, interface, copy, screenshots, or video assets. AgentFlight Recorder is an investigation and verification product for engineers; it is not a learning platform.
 

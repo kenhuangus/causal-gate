@@ -28,13 +28,19 @@ class Recorder:
 
     def record(self, event_type: EventType, actor: str, payload: dict[str, Any], **kwargs: Any) -> Event:
         sensitivity = list(kwargs.get("sensitivity", []))
+        kwargs.setdefault("logical_clock", len(self.execution.events) + 1)
+        kwargs.setdefault("emitter_id", actor)
         event = Event(execution_id=self.execution.id, sequence=len(self.execution.events) + 1,
                       type=event_type, actor=actor, payload=payload,
                       redacted_payload=redacted_event_payload(payload, sensitivity), **kwargs)
+        existing_ids = {existing.id for existing in self.execution.events}
+        if event.parent_id and event.parent_id not in existing_ids:
+            raise ValueError("parent must reference an earlier event in this execution")
+        if set(event.causal_predecessor_ids) - existing_ids:
+            raise ValueError("causal predecessors must reference earlier events in this execution")
         if event_type in {EventType.PLAN, EventType.DECISION}:
             from .flight_record import intent_clauses
 
-            existing_ids = {existing.id for existing in self.execution.events}
             if set(payload.get("evidence_event_ids", [])) - existing_ids:
                 raise ValueError("evidence must reference earlier events in this execution")
             valid_clause_ids = {clause.id for clause in intent_clauses(self.execution.intent)}

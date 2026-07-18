@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from .assurance import run_synthetic_assurance_suite
 from .benchmark import run_benchmark
 from .demo import compare, run_demo
 from .models import PolicyMode
@@ -19,6 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     demo.add_argument("--json", action="store_true")
     sub.add_parser("verify-demo")
     sub.add_parser("benchmark")
+    sub.add_parser("assurance-suite", help="run the authenticated multi-fixture promotion suite")
     record = sub.add_parser("record-analysis", help="generate a labeled recorded semantic-analysis artifact")
     record.add_argument("--output", default="artifacts/recorded-analysis.json")
     args = parser.parse_args(argv)
@@ -43,6 +45,15 @@ def main(argv: list[str] | None = None) -> int:
         except AnalysisUnavailable as exc:
             print(str(exc), file=sys.stderr)
             return 2
+    if args.command == "assurance-suite":
+        import os
+        key = os.getenv("AGENTFLIGHT_ATTESTATION_KEY", "")
+        if len(key.encode()) < 32:
+            print("AGENTFLIGHT_ATTESTATION_KEY must contain at least 32 bytes", file=sys.stderr)
+            return 2
+        result = run_synthetic_assurance_suite(key)
+        print(result.model_dump_json(indent=2))
+        return 0 if result.eligible else 1
     result = run_benchmark()
     print(json.dumps(result.as_dict(), indent=2))
     return 0 if result.precision == 1 and result.recall == 1 and result.deterministic else 1

@@ -9,6 +9,7 @@ describe('judge UI contracts',()=>{
     expect(source).toContain("/api/v1/demo/${mode}");
     expect(source).toContain('/api/v1/comparisons/${run.id}/${value.id}');
     expect(source).toContain('/api/v1/recorded-analysis');
+    expect(source).toContain('/api/v1/assurance-suite');
     expect(source).not.toMatch(/sign[ -]?in|log[ -]?in|password/i);
   });
 
@@ -39,7 +40,7 @@ describe('judge UI contracts',()=>{
 
   it('presents intent evidence without implying access to hidden reasoning',()=>{
     expect(source).toContain('/intent-flight-record');
-    for(const copy of ['INTENT FLIGHT RECORD','FIRST DIVERGENCE','CLAUSE REGISTER','STRUCTURED DECISIONS','CAUSAL CHAIN','UNBOUND ACTIONS']){
+    for(const copy of ['INTENT FLIGHT RECORD','DIVERGENCE FRONTIER','CLAUSE REGISTER','STRUCTURED DECISIONS','CAUSAL PROVENANCE','UNBOUND ACTIONS']){
       expect(source).toContain(copy);
     }
     expect(source).toContain('Application-provided summaries');
@@ -48,11 +49,21 @@ describe('judge UI contracts',()=>{
   });
 
   it('shows an evidence-gated software factory promotion decision',()=>{
-    for(const contract of ['promotion_gate','restored_clause_ids','regressions','SOFTWARE FACTORY GATE','Evidence-gated, not score-gated']){
+    for(const contract of ['promotion_gate','restored_clause_ids','regressions','FIXTURE REPLAY GATE','Evidence-gated, not score-gated']){
       expect(source).toContain(contract);
     }
-    expect(source).toContain('not a general production-safety certification');
+    expect(source).toContain('production-safety certification');
     expect(styles).toContain('.promotion-gate');
+  });
+
+  it('makes mathematical assurance legible to judges',()=>{
+    for(const copy of ['AUTHENTICATED RELEASE EVIDENCE','UNCERTAINTY BOUND','RUNNER ATTESTATION','GATE CONDITIONS','Behavioral verification, separated from declarations','self-reported confidence']){
+      expect(source).toContain(copy);
+    }
+    for(const contract of ['assurance-suite-card','confidence-track','coverage-breakdown','frontier-links','critical-clause']){
+      expect(styles).toContain(`.${contract}`);
+    }
+    expect(source).toContain('Scoped evidence—not a general production-safety certificate.');
   });
 
   it('is self-contained and includes resilient accessibility media rules',()=>{

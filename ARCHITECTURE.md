@@ -28,7 +28,7 @@ The intent service converts user instructions and developer policy into an `Inte
 
 The analysis engine runs deterministic rules first, then sends a minimized trace projection to GPT-5.6. It validates model output, verifies every cited event identifier, merges duplicate findings, and records analysis provenance.
 
-The intent-proof engine compiles a contract into stable clauses, reconstructs each event's causal ancestry, and binds consequential actions to the clauses that authorize or constrain them. It emits an `IntentFlightRecord` containing explicit decision records, coverage, unbound actions, and the earliest deterministic divergence. It does not infer private chain-of-thought; it analyzes only recorded application events and contract fields.
+The conformance engine compiles a contract into canonical full-digest clauses, evaluates each binding with a versioned verifier, reconstructs the event partial order, and binds consequential actions to clauses that authorize or constrain them. It emits an `IntentFlightRecord` containing explicit decision records, separate coverage measures, unbound actions, and the causal-minimal divergence frontier. It does not infer private chain-of-thought; it analyzes only recorded application events and contract fields.
 
 The policy engine evaluates proposed tool calls before execution. Baseline mode records violations but permits seeded demo behavior. Protected mode denies violations or requests approval. This behavior is explicit in the user interface to avoid presenting monitoring as enforcement.
 
@@ -56,7 +56,7 @@ sequenceDiagram
 
 ## 5. Data model
 
-`Execution` contains identity, status, policy mode, framework, timestamps, source execution for replay, and aggregate risk. `TraceEvent` contains execution identity, sequence, event type, actor, parent, payload, redacted payload, provenance, sensitivity, and timestamp. `IntentContract` contains goals, prohibitions, tools, resources, approval gates, completion conditions, model provenance, and version. `IntentClause` gives each contract constraint a stable identifier. `IntentBinding` records whether a consequential event is aligned, divergent, or unbound and cites its clauses. `IntentFlightRecord` contains causal event identifiers, explicit decision records, coverage, unbound actions, and the first divergence. `Finding` contains detector identity, severity, evidence event identifiers, and recommendation. `PromotionGate` records `promote` or `hold`, restored clauses, regressions, and evidence. `ReplayFixture` contains the seeded task and simulated outputs. `BenchmarkRun` records suite version and per-scenario results.
+`Execution` contains identity, policy mode, contract, events, findings, fixture digest, and replay link. `Event` contains recorder sequence, logical clock, emitter, parent, causal predecessors, validated evidence, payload, redacted payload, provenance, and sensitivity. `IntentClause` has a canonical identifier and criticality. `ClauseEvaluation` records status, verifier identity/version, and evidence. `IntentFlightRecord` contains the divergence frontier, separate coverage measures, explicit decisions, causal-provenance events, and unbound actions. `PromotionGate` is fixture-scoped. `SuitePromotionGate` adds authenticated provenance, artifact and fixture digests, diversity checks, and a Wilson pass interval.
 
 ## 6. API boundaries
 
@@ -71,7 +71,7 @@ flowchart TD
     D --> C["Candidate code or policy change"]
     C --> P["Sandbox fixture replay"]
     P --> G{"Promotion gate"}
-    G -->|proof passes| M["Promote"]
+    G -->|authenticated suite passes| M["Scoped promotion recommendation"]
     G -->|divergence or regression| H["Hold and revise"]
 ```
 

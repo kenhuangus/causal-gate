@@ -194,8 +194,12 @@ def compare(left: Execution, right: Execution) -> Comparison:
         ),
         PromotionCheck(
             name="coverage_non_regression",
-            passed=right_record.coverage.coverage_ratio >= left_record.coverage.coverage_ratio,
-            summary="Intent-clause coverage does not regress in the protected candidate.",
+            passed=(
+                right_record.coverage.verified_coverage_ratio >= left_record.coverage.verified_coverage_ratio
+                and right_record.coverage.consequential_action_coverage_ratio
+                >= left_record.coverage.consequential_action_coverage_ratio
+            ),
+            summary="Verified-clause and consequential-action coverage do not regress.",
         ),
     ]
     left_violated = {

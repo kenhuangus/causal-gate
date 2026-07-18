@@ -2,13 +2,13 @@
 
 ## 1. Product summary
 
-AgentFlight Recorder is an intent-assurance tool for AI engineers and software factories. It converts an agent execution into an Intent Flight Record that binds a declared intent contract to explicit plans, application-provided decision summaries, tool calls, state mutations, approvals, evidence, and outcomes. It deterministically identifies the first consequential event whose authorization chain diverges from the contract, then replays the same fixture and issues a promotion decision for a candidate control.
+AgentFlight Recorder is an intent-assurance tool for AI engineers and software factories. It converts an agent execution into versioned contract-conformance evidence binding a declared contract to explicit plans, application-provided decision summaries, tool calls, state mutations, approvals, evidence, and outcomes. It identifies the causal-minimal frontier of detected violations, supports same-fixture replay, and issues a scoped promotion recommendation only from an authenticated multi-fixture suite.
 
 The hackathon submission targets the Developer Tools category. The submission supports OpenAI Agents SDK and LangGraph integrations, an intentionally vulnerable demonstration agent, eight detector classes, a hosted dashboard, CLI and CI workflows, a local Docker fallback, and repeatable attack–detect–repair–verify demonstrations.
 
 ## 1.1 Track fit and one-sentence value proposition
 
-AgentFlight Recorder fits the Developer Tools objective because it closes the loop between agent debugging and safe improvement. Its value proposition is: **prove where an agent first departed from declared intent, then prove a revision restores that intent before promotion**. The submission shall describe it as an intent-assurance and change-verification instrument, not as a general monitoring dashboard or a security standard.
+AgentFlight Recorder fits the Developer Tools objective because it closes the loop between agent debugging and evidence-gated improvement. Its value proposition is: **locate causal-minimal detected departures from a declared contract, then collect authenticated replay evidence before promotion**. The submission shall describe it as an intent-assurance and change-verification instrument, not as a general monitoring dashboard, formal proof of latent intent, or security standard.
 
 ## 2. Problem
 
@@ -80,7 +80,7 @@ Users shall be able to assign a finding status, add a mitigation note, compare p
 
 ### FR-13 Intent Flight Record
 
-The system shall compile the intent contract into stable clause identifiers and bind consequential events to one or more clauses. The record shall include the causal chain, explicit plan and decision records, intent coverage, unbound consequential actions, the first divergence event, and a human-readable divergence reason. Parent ancestry and evidence identifiers must resolve within the same execution.
+The system shall compile the intent contract into canonical full-digest clause identifiers and bind consequential events through versioned evaluations. The record shall include recorded causal provenance, explicit plan and decision records, separate declaration/verified/action coverage, unbound actions, and every causal-minimal detected divergence. Parent, predecessor, and evidence identifiers must resolve within the same execution.
 
 ### FR-14 Explicit decision records
 
@@ -152,8 +152,8 @@ This positioning is based on current official product documentation, not a claim
 | Product | Officially documented center of gravity | AgentFlight's deliberately narrower differentiation |
 | --- | --- | --- |
 | [LangSmith Observability](https://docs.langchain.com/langsmith/observability) | Trace visibility, production metrics, dashboards, and agent debugging | Stable intent-clause bindings, a deterministic first authorization divergence, and an evidence-gated revision verdict |
-| [Langfuse Observability](https://langfuse.com/docs/observability/overview) | Full request lifecycle, tool and retrieval relationships, sessions, cost, latency, and attributes | An intent proof that requires every consequential action to justify itself against the declared contract |
-| [Arize Phoenix Tracing](https://arize.com/docs/phoenix/tracing/concepts-tracing/what-are-traces) | LLM, tool, agent, and chain spans plus evaluation and trace analysis | A software-factory control loop that turns the first divergence and same-fixture replay into `promote` or `hold` |
+| [Langfuse Observability](https://langfuse.com/docs/observability/overview) | Full request lifecycle, tool and retrieval relationships, sessions, cost, latency, and attributes | Versioned conformance evidence requiring every consequential action to bind to the declared contract |
+| [Arize Phoenix Tracing](https://arize.com/docs/phoenix/tracing/concepts-tracing/what-are-traces) | LLM, tool, agent, and chain spans plus evaluation and trace analysis | A software-factory control loop that turns a causal-minimal divergence frontier and authenticated replay suite into a scoped recommendation |
 
 AgentFlight should integrate with or ingest conventional traces rather than compete on telemetry breadth. Its novelty claim rests on the contract-to-decision-to-action proof and conservative promotion gate. If those artifacts are absent, the product has fallen back to ordinary observability and has missed its product objective.
 

@@ -1,0 +1,30 @@
+{
+  "schema_version": "agentflight-eval-corpus/1.0",
+  "suite_id": "afr-suite-1.2",
+  "label_method": "deterministic seeded target-rule labels",
+  "annotation_status": "synthetic_author_labels",
+  "splits": {
+    "development": "bundled target-rule transformations",
+    "locked_test": "not yet independently collected"
+  },
+  "metrics": [
+    "precision",
+    "recall",
+    "specificity",
+    "two-sided 95% Wilson score intervals",
+    "per-rule sensitivity and specificity intervals"
+  ],
+  "non_claims": [
+    "not an estimate of production prevalence",
+    "not independent external validation",
+    "not evidence of detector completeness",
+    "target-rule-negative cases may contain other seeded findings"
+  ],
+  "locked_test_requirements": [
+    "stable case and fixture identifiers",
+    "two independent blinded annotations",
+    "adjudicated disagreements",
+    "no detector tuning after labels are revealed",
+    "preregistered acceptance thresholds and sample-size calculation"
+  ]
+}

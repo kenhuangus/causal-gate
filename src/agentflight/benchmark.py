@@ -4,6 +4,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
+from .assurance import wilson_interval
 from .demo import run_demo
 from .detectors import analyze
 from .models import Event, EventType, Execution
@@ -27,9 +28,14 @@ class BenchmarkResult:
     true_positives: int
     false_positives: int
     false_negatives: int
+    true_negatives: int
     precision: float
     recall: float
+    specificity: float
     deterministic: bool
+    confidence_intervals: dict[str, dict[str, object]]
+    per_rule: list[dict[str, object]]
+    evidence_scope: str
     cases: list[dict[str, object]]
 
     def as_dict(self):
@@ -124,6 +130,34 @@ def run_benchmark() -> BenchmarkResult:
     tp = sum(case.label and case.observed for case in first)
     fp = sum(not case.label and case.observed for case in first)
     fn = sum(case.label and not case.observed for case in first)
+    tn = sum(not case.label and not case.observed for case in first)
     deterministic = [(c.id, c.label, c.rule_id, c.fixture_hash, c.observed) for c in first] == [(c.id, c.label, c.rule_id, c.fixture_hash, c.observed) for c in second]
-    return BenchmarkResult("afr-suite-1.1", len(first), tp, fp, fn, tp / max(tp + fp, 1), tp / max(tp + fn, 1), deterministic,
-                           [case.__dict__ for case in first])
+    precision_interval = wilson_interval(tp, tp + fp).model_dump()
+    recall_interval = wilson_interval(tp, tp + fn).model_dump()
+    specificity_interval = wilson_interval(tn, tn + fp).model_dump()
+    per_rule = []
+    for rule in RULES:
+        cases = [case for case in first if case.rule_id == rule]
+        rule_tp = sum(case.label and case.observed for case in cases)
+        rule_tn = sum(not case.label and not case.observed for case in cases)
+        positives = sum(case.label for case in cases)
+        negatives = len(cases) - positives
+        per_rule.append({
+            "rule_id": rule,
+            "positives": positives,
+            "negatives": negatives,
+            "sensitivity_interval": wilson_interval(rule_tp, positives).model_dump(),
+            "specificity_interval": wilson_interval(rule_tn, negatives).model_dump(),
+        })
+    return BenchmarkResult(
+        "afr-suite-1.2",
+        len(first), tp, fp, fn, tn,
+        tp / max(tp + fp, 1),
+        tp / max(tp + fn, 1),
+        tn / max(tn + fp, 1),
+        deterministic,
+        {"precision": precision_interval, "recall": recall_interval, "specificity": specificity_interval},
+        per_rule,
+        "synthetic_regression_evidence_not_production_validation",
+        [case.__dict__ for case in first],
+    )

@@ -1,15 +1,15 @@
 # AgentFlight Recorder
 
-AgentFlight Recorder turns a tool-using AI-agent run into an **Intent Flight Record**: a causal proof connecting the declared intent to explicit plans, application-provided decision summaries, tool calls, state changes, and the final outcome. It identifies the first consequential event that cannot be justified by the intent contract, then replays the identical scenario to decide whether a proposed control is safe to promote.
+AgentFlight Recorder turns a tool-using AI-agent run into an **Intent Flight Record**: versioned contract-conformance evidence connecting declared intent to explicit plans, application-provided decision summaries, tool calls, state changes, and outcomes. It returns the causal-minimal frontier of detected contract violations, then evaluates a candidate control through fixture replay and an authenticated multi-fixture promotion suite.
 
 This is not another trace viewer. Traces answer what happened; AgentFlight answers which intent clause authorized an action, where that authorization chain first broke, and whether a candidate change restored the intended behavior without a detected regression. The included judge path is deterministic, uses synthetic data, makes no network calls, and requires no OpenAI API key.
 
-AgentFlight never claims access to hidden model chain-of-thought. `plan` and `decision` events are explicit records emitted by the application: concise rationale summaries, considered alternatives, confidence, cited evidence events, and referenced intent clauses. They are inspectable engineering artifacts, not private model reasoning.
+AgentFlight never claims access to hidden model chain-of-thought. `plan` and `decision` events are explicit records emitted by the application: concise rationale summaries, considered alternatives, self-reported uncalibrated confidence, cited evidence events, and referenced intent clauses. They are inspectable engineering artifacts, not private model reasoning.
 
 ## Judge quickstart
 
 ```bash
-docker compose up --build --wait
+AGENTFLIGHT_ATTESTATION_KEY=$(openssl rand -hex 32) docker compose up --build --wait
 ```
 
 Open `http://localhost:8080`, select **Run vulnerable scenario**, inspect the first divergence in the Intent Flight Record, then select **Replay with protection**. The baseline run seeds eight documented security conditions. The protected replay uses the same fixture hash, blocks the unauthorized read before synthetic data can reach the simulated outbound tool, and produces an evidence-gated promotion decision.
@@ -27,11 +27,12 @@ uv run python main.py
 ```bash
 make verify-demo
 make verify-benchmark
+AGENTFLIGHT_ATTESTATION_KEY='replace-with-at-least-32-random-bytes' make verify-assurance
 make verify-adapters
-make verify-release
+AGENTFLIGHT_ATTESTATION_KEY='replace-with-at-least-32-random-bytes' make verify-release
 ```
 
-`make verify-demo` runs the Python tests and end-to-end CLI assertion. `make verify-release` adds the benchmark, adapter, recorded-artifact, and production frontend checks. The 32-case labeled benchmark consists of two target-rule-positive and two target-rule-negative variants for each detector class; a target-rule-negative trace may still contain other seeded violations. Reported precision and recall apply only to this synthetic suite.
+`make verify-demo` runs the Python tests and end-to-end CLI assertion. `make verify-release` adds the benchmark, authenticated assurance suite, adapters, recorded artifact, and production frontend checks. The 32-case labeled benchmark consists of two target-rule-positive and two target-rule-negative variants per detector; a target-rule-negative trace may still contain other seeded violations. Results include two-sided 95% Wilson intervals and apply only to this synthetic suite.
 
 ## SDK integration
 
@@ -59,6 +60,7 @@ uv run agentflight demo --mode baseline --json  # exits 1 on critical findings
 uv run agentflight demo --mode protected        # exits 0
 uv run agentflight verify-demo
 uv run agentflight benchmark
+AGENTFLIGHT_ATTESTATION_KEY='replace-with-at-least-32-random-bytes' uv run agentflight assurance-suite
 ```
 
 The GitHub Actions workflow executes the complete keyless verification path. It has read-only repository permissions and receives no product runtime key.
@@ -69,11 +71,13 @@ The FastAPI service serves both the versioned API and the React investigation in
 
 The eight rules are protected-data egress, missing approval, unsafe tool chaining, instruction-source confusion, goal drift, privilege escalation, unsafe authorization-state mutation, and unsupported completion. Every finding cites event identifiers validated against its execution.
 
-The intent-analysis layer compiles each contract into stable clause identifiers, binds consequential events to those clauses, walks parent links to reconstruct the causal chain, and returns intent coverage plus the first divergence. Baseline-versus-candidate comparison is therefore useful in an AI-engineering or software-factory loop:
+The intent-analysis layer compiles each contract into full canonical SHA-256 clause identifiers, emits versioned clause evaluations, reconstructs recorded causal provenance, and returns separate declaration, verified-behavior, and action coverage plus a causal-minimal divergence frontier. Baseline-versus-candidate comparison is useful in an AI-engineering or software-factory loop:
 
-`intent contract → decision record → action chain → first divergence → candidate control → fixture replay → promotion gate`
+`intent contract → versioned evaluation → causal frontier → candidate control → fixture replay → authenticated suite gate`
 
-The gate is deliberately conservative: model-generated explanations or code changes cannot promote themselves. Promotion requires fixture parity, restored intent clauses, no detected candidate divergence, and no new deterministic findings.
+The gate is deliberately conservative: model-generated explanations or code changes cannot promote themselves. A fixture replay produces only a scoped recommendation. The software-factory gate additionally requires a signed fixture manifest, content-addressed verifier artifact, minimum fixture diversity, all replay checks, and a preregistered lower confidence bound. Neither result is a general production-safety certification.
+
+The formal semantics, trusted-computing-base boundary, statistical protocol, and claim limitations are specified in [`docs/ASSURANCE-SPEC.md`](docs/ASSURANCE-SPEC.md).
 
 ## Security model
 
@@ -105,8 +109,10 @@ Codex assisted with the implementation and verification described in `docs/codex
 Create an Artifact Registry repository named `agentflight`, then submit the pinned container through Cloud Build:
 
 ```bash
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
 gcloud artifacts repositories create agentflight --repository-format=docker --location=us-central1
+openssl rand -hex 32 | gcloud secrets create agentflight-attestation-key --data-file=-
+gcloud secrets add-iam-policy-binding agentflight-attestation-key --member="serviceAccount:agentflight-web@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
 gcloud builds submit --config cloudbuild.yaml
 ```
 

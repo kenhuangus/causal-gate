@@ -13,6 +13,7 @@ jobs:
       - run: uv run --isolated --extra dev pytest
       - run: uv run --isolated agentflight verify-demo
       - run: uv run --isolated agentflight benchmark
+      - run: KEY=$(openssl rand -hex 32); AGENTFLIGHT_ATTESTATION_KEY="$KEY" uv run --isolated agentflight assurance-suite
       - run: uv run --isolated python scripts/verify_recorded_analysis.py
       - run: npm ci && npm test && npm run build && npm audit --audit-level=high
         working-directory: apps/web

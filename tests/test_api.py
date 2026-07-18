@@ -106,3 +106,16 @@ def test_recorded_analysis_is_available_and_validated_in_judge_profile():
     assert response.status_code == 200
     assert response.json()["mode"] == "recorded"
     assert response.json()["artifact_digest"]
+
+
+def test_assurance_suite_requires_runtime_attestation_and_returns_scoped_verdict(monkeypatch):
+    monkeypatch.delenv("AGENTFLIGHT_ATTESTATION_KEY", raising=False)
+    assert client().get("/api/v1/assurance-suite").status_code == 503
+    monkeypatch.setenv("AGENTFLIGHT_ATTESTATION_KEY", "runtime-only-test-key-with-at-least-32-bytes")
+    response = client().get("/api/v1/assurance-suite")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["eligible"] is True
+    assert body["scope"] == "configured_multi_fixture_suite"
+    assert body["production_safety_certification"] is False
+    assert body["pass_interval"]["lower"] >= 0.70

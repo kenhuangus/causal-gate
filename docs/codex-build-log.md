@@ -1,5 +1,25 @@
 # Codex build log
 
+## Assurance-centered judge UX
+
+Request: make the mathematical and scientific assurance improvements visible through a professional, attractive judge experience.
+
+Changes: added a first-class authenticated release-evidence card with fixture, task-family, channel, and gate-check breadth; an accessible Wilson-interval visualization with the preregistered threshold; a complete gate-condition register; and content-addressed runner-attestation details. The compact card establishes credibility before the demo, while the expanded card appears after protected replay to complete the software-factory narrative. Upgraded the Intent Flight Record with a multi-member divergence-frontier view, separate verified/declaration/action coverage bars, critical-clause and evaluation-status badges, readable digest presentation, and corrected top-priority finding terminology. Added tailored loading, unavailable-attestation, responsive, narrow-screen, reduced-motion, and forced-color treatments.
+
+Verification result: 45 Python tests passed; the demo and authenticated 12-fixture suite passed; 8 UI contract tests passed; TypeScript and the production Vite build passed; `npm audit --audit-level=high` reported zero vulnerabilities; and `git diff --check` passed. The cloud browser continues to reject local-loopback navigation by policy, so rendered-browser testing remains pending a public Cloud Run URL.
+
+## Mathematical and scientific assurance upgrade
+
+Request: implement the five-phase improvement program covering formal claim boundaries, stronger causal and coverage mathematics, scientific validation evidence, adversarial testing, and a software-factory release gate.
+
+Changes: added `docs/ASSURANCE-SPEC.md` with formal objects, verifier semantics, coverage definitions, divergence-frontier semantics, gate hierarchy, trusted-computing-base boundaries, and explicit non-claims. Intent clauses now use canonical full SHA-256 identifiers. Event contracts support validated causal predecessors, logical clocks, and emitter identity. Flight records retain versioned clause evaluations, `ever_violated` history, separate declaration/verified/action coverage, critical-clause coverage, and every causal-minimal violation rather than forcing concurrent events into a single causal order. Decision confidence is explicitly self-reported and uncalibrated.
+
+Validation: the benchmark now reports true negatives, specificity, per-rule sensitivity/specificity, evidence scope, and two-sided 95% Wilson intervals. Added a corpus manifest and tests for canonical identifiers, coverage separation, incomparable divergence frontiers, event-ID metamorphic invariance, uncertainty reporting, provenance tampering, insufficient fixture diversity, and runtime attestation enforcement.
+
+Promotion: retained the interactive comparison as a labeled single-fixture recommendation and added an authenticated 12-fixture suite gate. The suite binds source revision, SHA-256 verifier artifact digest, detector and policy versions, runner identity, exact fixture manifest, and timestamp under HMAC-SHA256. It requires content-addressed fixture diversity, at least four task families and three channels, every fixture gate, complete critical-clause verification, and a preregistered Wilson lower bound. Cloud Build and Docker Compose now provide runtime attestation configuration without involving the OpenAI API key.
+
+Verification result: 45 Python tests passed; the deterministic demo retained eight baseline findings and zero protected findings; the 32-case synthetic benchmark retained 16 true positives, 16 true negatives, zero false positives, and zero false negatives while reporting a 0.806 two-sided 95% Wilson lower bound for aggregate precision, recall, and specificity; the authenticated 12-fixture suite passed with a 0.758 lower bound; both adapter tests and the recorded GPT-5.6 artifact passed; 7 UI contract tests passed; TypeScript and the production build passed; and `npm audit --audit-level=high` reported zero vulnerabilities. The cloud browser refused local-loopback navigation by policy, so no rendered-browser result is claimed.
+
 ## 2026-07-17 — production-oriented deterministic release
 
 Request: implement, test, debug, and prepare AgentFlight Recorder for a production-oriented judge path while reserving the runtime API key exclusively for product runtime use.

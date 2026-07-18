@@ -51,6 +51,9 @@ class Event(StrictModel):
     redacted_payload: dict[str, Any] = Field(default_factory=dict)
     idempotency_key: str = Field(default_factory=lambda: f"idem_{uuid4().hex}", min_length=8, max_length=128)
     parent_id: str | None = None
+    causal_predecessor_ids: list[str] = Field(default_factory=list)
+    logical_clock: int | None = Field(default=None, ge=1)
+    emitter_id: str | None = None
     provenance: str = "application"
     sensitivity: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -120,6 +123,10 @@ class Event(StrictModel):
                 raise ValueError("decision confidence must be between 0 and 1")
         if self.parent_id == self.id:
             raise ValueError("event cannot parent itself")
+        if self.id in self.causal_predecessor_ids:
+            raise ValueError("event cannot causally precede itself")
+        if len(set(self.causal_predecessor_ids)) != len(self.causal_predecessor_ids):
+            raise ValueError("causal_predecessor_ids must be unique")
         return self
 
 
@@ -157,6 +164,7 @@ class IntentClauseKind(StrEnum):
 
 
 class BindingStatus(StrEnum):
+    UNKNOWN = "unknown"
     SATISFIED = "satisfied"
     VIOLATED = "violated"
     OBSERVED = "observed"
@@ -167,6 +175,7 @@ class IntentClause(StrictModel):
     kind: IntentClauseKind
     subject: str
     statement: str
+    critical: bool = True
 
 
 class IntentBinding(StrictModel):
@@ -174,6 +183,19 @@ class IntentBinding(StrictModel):
     status: BindingStatus
     event_ids: list[str]
     summaries: list[str]
+    verified_event_ids: list[str] = Field(default_factory=list)
+    verifier_ids: list[str] = Field(default_factory=list)
+    ever_violated: bool = False
+
+
+class ClauseEvaluation(StrictModel):
+    clause_id: str
+    event_id: str
+    status: BindingStatus
+    verifier_id: str
+    verifier_version: str
+    evidence_event_ids: list[str]
+    summary: str
 
 
 class FirstDivergence(StrictModel):
@@ -182,6 +204,7 @@ class FirstDivergence(StrictModel):
     clause_ids: list[str]
     summary: str
     causal_event_ids: list[str]
+    order_basis: str = "causal_partial_order"
 
 
 class IntentCoverage(StrictModel):
@@ -191,6 +214,17 @@ class IntentCoverage(StrictModel):
     violated_clauses: int
     coverage_ratio: float = Field(ge=0, le=1)
     unbound_clause_ids: list[str]
+    declaration_coverage_ratio: float = Field(default=0, ge=0, le=1)
+    verified_coverage_ratio: float = Field(default=0, ge=0, le=1)
+    consequential_action_coverage_ratio: float = Field(default=0, ge=0, le=1)
+    declared_clauses: int = 0
+    verified_clauses: int = 0
+    consequential_actions: int = 0
+    bound_consequential_actions: int = 0
+    unknown_clause_ids: list[str] = Field(default_factory=list)
+    critical_clauses: int = 0
+    verified_critical_clauses: int = 0
+    unknown_critical_clause_ids: list[str] = Field(default_factory=list)
 
 
 class DecisionRecord(StrictModel):
@@ -205,6 +239,7 @@ class DecisionRecord(StrictModel):
     evidence_event_ids: list[str]
     alternatives_considered: list[str]
     confidence: float = Field(ge=0, le=1)
+    confidence_semantics: str = "self_reported_uncalibrated"
 
 
 class ConsequentialAction(StrictModel):
@@ -218,7 +253,10 @@ class FlightRecord(StrictModel):
     intent_version: int
     clauses: list[IntentClause]
     bindings: list[IntentBinding]
+    evaluations: list[ClauseEvaluation] = Field(default_factory=list)
     first_divergence: FirstDivergence | None
+    divergence_frontier: list[FirstDivergence] = Field(default_factory=list)
+    causal_order_basis: str = "parent_and_validated_evidence_partial_order"
     coverage: IntentCoverage
     plan_event_ids: list[str]
     decision_event_ids: list[str]
@@ -243,6 +281,8 @@ class PromotionGate(StrictModel):
     reason: str
     restored_clause_ids: list[str]
     regressions: list[str]
+    scope: str = "single_fixture_replay"
+    production_safety_certification: bool = False
 
 
 class Comparison(StrictModel):

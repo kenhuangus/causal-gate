@@ -12,6 +12,7 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
+from .assurance import SuitePromotionGate, run_synthetic_assurance_suite
 from .benchmark import run_benchmark
 from .demo import compare, run_demo
 from .detectors import analyze
@@ -120,7 +121,7 @@ def create_app(
             chunks.append(chunk)
         body = b"".join(chunks)
         request._body = body
-        if request.url.path.startswith("/api/v1/demo") or request.url.path == "/api/v1/benchmark":
+        if request.url.path.startswith("/api/v1/demo") or request.url.path in {"/api/v1/benchmark", "/api/v1/assurance-suite"}:
             key = request.client.host if request.client else "unknown"
             now, bucket = time.monotonic(), app.state.rate[key]
             while bucket and bucket[0] < now - 60:
@@ -253,6 +254,13 @@ def create_app(
     @app.get("/api/v1/benchmark")
     def benchmark():
         return run_benchmark().as_dict()
+
+    @app.get("/api/v1/assurance-suite", response_model=SuitePromotionGate)
+    def assurance_suite():
+        key = os.getenv("AGENTFLIGHT_ATTESTATION_KEY", "")
+        if len(key.encode()) < 32:
+            raise HTTPException(503, "authenticated suite attestation is not configured")
+        return run_synthetic_assurance_suite(key)
 
     web = Path(__file__).parents[2] / "apps" / "web" / "dist"
     if web.exists():
