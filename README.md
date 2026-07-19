@@ -91,6 +91,35 @@ with start_execution(intent) as recorder:
 
 The default SDK performs no network or model call. See [the complete SDK guide](docs/SDK.md) for sinks, fail-open/fail-closed behavior, async instrumentation, and framework integration examples.
 
+## How teams use CausalGate: SDK and SaaS control plane
+
+CausalGate has two complementary product surfaces. The SDK runs at the agent boundary, where it can observe and mediate consequential actions. The SaaS control plane collects redacted evidence across applications so engineering and security teams can investigate incidents, manage policy, compare revisions, and gate releases.
+
+| SDK or self-hosted edge | SaaS control plane |
+|---|---|
+| Runs inside the customer's agent application | Provides shared workspaces for engineering and security teams |
+| Captures intent, plans, explicit decision summaries, tool proposals, results, and state changes | Retains and searches redacted execution evidence |
+| Applies deterministic authorization immediately before mapped effectful tools | Presents authorization records, causal divergence, findings, and evidence |
+| Exports to memory, redacted JSONL, or an authenticated API | Distributes policy and orchestrates fixture replay and comparison |
+| Supports manual Python, OpenAI Agents SDK, and LangGraph integrations | Produces reports and authenticated software-factory release gates |
+
+A typical customer workflow is:
+
+1. Define the user's approved task as an `IntentContract` and instrument consequential tools with the SDK.
+2. Evaluate each mapped tool proposal against identity, agent configuration, the signed intent grant, organization policy, and runtime context.
+3. Execute only with an exact-request, short-lived, single-use permit; record redacted evidence either locally or in a team workspace.
+4. Investigate any detected departure in the dashboard, following the evidence-linked causal frontier instead of manually correlating raw logs.
+5. Change code or policy and replay the identical fixture under enforcement.
+6. Compare the original and candidate runs, then return `promote` or `hold` to CI from deterministic, authenticated evidence.
+
+The core path does not require an OpenAI key. Optional GPT-5.6 Sol analysis uses the customer's OpenAI project to compile a non-authoritative candidate contract or investigate a minimized redacted trace; model output cannot issue grants, approve tools, suppress deterministic findings, or promote a release.
+
+### Current product maturity
+
+The repository ships a working alpha Python SDK, private ingestion API, CLI and CI workflows, deterministic demo, investigation dashboard, framework adapters, replay engine, and authenticated fixture-suite gate. The current runnable deployment is a single-workspace developer and judge profile using SQLite and a process-local permit ledger.
+
+The multi-tenant SaaS topology is a documented production target, not a claim about the current build. Production hosting still requires OIDC and role-based access, tenant isolation, durable shared storage, atomic distributed permit consumption, private analysis workers, retention controls, quotas, audit logs, and an independently reviewed credential boundary. See [the SaaS and BYOK design](docs/SAAS-BYOK.md).
+
 ## Why this project exists
 
 Agent observability platforms are excellent at collecting spans, prompts, latency, token usage, tool calls, and model outputs. Those traces answer:
@@ -376,7 +405,7 @@ make verify-web                  # UI tests, production build, and npm audit
 
 Verified repository evidence at the time of this README revision:
 
-- 63 Python tests passing;
+- 80 Python tests passing with 90% statement coverage;
 - 9 judge-UI contract tests passing;
 - production TypeScript and Vite build passing;
 - zero npm production-audit vulnerabilities;

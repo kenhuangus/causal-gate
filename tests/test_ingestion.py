@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import sqlite3
+from contextlib import closing
 
 from fastapi.testclient import TestClient
 
@@ -162,7 +163,7 @@ def test_sqlite_persistence_never_contains_raw_event_payload(tmp_path):
     # A new store simulates process restart and proves the durable body is safe.
     restored = TraceStore(str(path)).get(run.id)
     assert restored and restored.events[0].payload["nested"]["x-api-key"] == "[REDACTED]"
-    with sqlite3.connect(path) as connection:
+    with closing(sqlite3.connect(path)) as connection:
         durable_text = " ".join(str(value) for row in connection.execute("SELECT body FROM executions UNION ALL SELECT body FROM events") for value in row)
     assert "must-not-persist" not in durable_text and "also-not-persist" not in durable_text
     same, retry = store.append(run.id, event)

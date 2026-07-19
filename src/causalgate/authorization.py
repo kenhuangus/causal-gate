@@ -547,6 +547,7 @@ def decision_event_payload(decision: AuthorizationDecision, *, observe_only: boo
         "policy_version": decision.policy_version,
         "matched_policy_ids": decision.matched_policy_ids,
         "obligations": decision.obligations,
+        "permit_issued": decision.permit is not None,
         "permit_id": decision.permit.permit_id if decision.permit else None,
         "request": safe_request,
     }
@@ -573,7 +574,7 @@ def authorization_record(run: Execution) -> AuthorizationRecord:
             effects=[str(item) for item in request.get("effects", [])] if isinstance(request.get("effects", []), list) else [],
             matched_policy_ids=[str(item) for item in event.payload.get("matched_policy_ids", [])],
             obligations=[str(item) for item in event.payload.get("obligations", [])],
-            permit_issued=bool(event.payload.get("permit_id")),
+            permit_issued=event.payload.get("permit_issued") is True,
         ))
     proposal_ids = {event.id for event in run.events if event.type == EventType.TOOL_PROPOSAL}
     mediated_ids = {event.parent_id for event in policy_events if event.parent_id}

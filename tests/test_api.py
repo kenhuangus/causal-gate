@@ -1,9 +1,11 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 import causalgate.api as api_module
+import causalgate.storage as storage_module
 from causalgate.api import create_app
 from causalgate.storage import TraceStore
 from causalgate.demo import FIXTURE
@@ -32,8 +34,19 @@ def test_health_and_demo_journey():
     assert comparison.json()["promotion_gate"]["verdict"] == "promote"
     authorization = c.get(f"/api/v1/executions/{baseline['id']}/authorization-record")
     assert authorization.status_code == 200
-    assert authorization.json()["complete_mediation"] is True
-    assert authorization.json()["denied"] == 2
+    authorization_body = authorization.json()
+    assert authorization_body["complete_mediation"] is True
+    assert authorization_body["denied"] == 2
+    send_decision = authorization_body["decisions"][2]
+    assert send_decision["tool"] == "send_message"
+    assert send_decision["action"] == "action.communicate.external"
+    assert send_decision["reason_code"] == "intent.tool"
+    assert send_decision["matched_policy_ids"] == [
+        "policy.default_deny",
+        "policy.grant_integrity",
+        "policy.identity_intersection",
+    ]
+    assert send_decision["permit_issued"] is False
     ontology = c.get("/api/v1/authorization/ontology").json()
     assert ontology["version"] == "causalgate-ontology/1.0"
     assert ontology["digest"].startswith("sha256:")
@@ -172,7 +185,7 @@ def test_public_demo_sqlite_batch_pruning_is_bounded(tmp_path):
     c = TestClient(create_app(store, demo_max_records=2))
     first = c.post("/api/v1/demo/reset").json()
     second = c.post("/api/v1/demo/reset").json()
-    with sqlite3.connect(path) as connection:
+    with closing(sqlite3.connect(path)) as connection:
         assert connection.execute("SELECT COUNT(*) FROM public_demo_executions").fetchone()[0] == 2
         assert connection.execute("SELECT COUNT(*) FROM executions").fetchone()[0] == 2
     assert c.get(f"/api/v1/executions/{first['baseline']}").status_code == 404
@@ -186,9 +199,32 @@ def test_recorded_analysis_is_available_and_validated_in_judge_profile():
     assert response.json()["artifact_digest"]
 
 
+def test_recorded_analysis_path_can_be_configured_for_installed_package(monkeypatch):
+    artifact = Path(__file__).parents[1] / "artifacts" / "recorded-analysis.json"
+    monkeypatch.setenv("CAUSALGATE_RECORDED_ANALYSIS", str(artifact))
+    monkeypatch.setattr(api_module, "__file__", "C:/installed/site-packages/causalgate/api.py")
+
+    response = client().get("/api/v1/recorded-analysis")
+
+    assert response.status_code == 200
+    assert response.json()["validation"] == "passed"
+
+
+def test_api_docs_csp_allows_only_the_swagger_assets_it_uses():
+    response = client().get("/api/docs")
+
+    assert response.status_code == 200
+    policy = response.headers["Content-Security-Policy"]
+    assert "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net" in policy
+    assert "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net" in policy
+    assert "img-src 'self' data: https://fastapi.tiangolo.com" in policy
+
+
 def test_assurance_suite_requires_runtime_attestation_and_returns_scoped_verdict(monkeypatch):
     monkeypatch.delenv("CAUSALGATE_ATTESTATION_KEY", raising=False)
-    assert client().get("/api/v1/assurance-suite").status_code == 503
+    unconfigured = client().get("/api/v1/assurance-suite")
+    assert unconfigured.status_code == 200
+    assert unconfigured.json() is None
     monkeypatch.setenv("CAUSALGATE_ATTESTATION_KEY", "runtime-only-test-key-with-at-least-32-bytes")
     response = client().get("/api/v1/assurance-suite")
     assert response.status_code == 200
@@ -197,3 +233,26 @@ def test_assurance_suite_requires_runtime_attestation_and_returns_scoped_verdict
     assert body["scope"] == "configured_multi_fixture_suite"
     assert body["production_safety_certification"] is False
     assert body["pass_interval"]["lower"] >= 0.70
+
+
+def test_trace_store_closes_every_sqlite_connection(monkeypatch, tmp_path):
+    real_connect = sqlite3.connect
+    opened = []
+    closed = set()
+
+    class TrackingConnection(sqlite3.Connection):
+        def close(self):
+            closed.add(id(self))
+            super().close()
+
+    def tracked_connect(*args, **kwargs):
+        connection = real_connect(*args, factory=TrackingConnection, **kwargs)
+        opened.append(connection)
+        return connection
+
+    monkeypatch.setattr(storage_module.sqlite3, "connect", tracked_connect)
+    store = TraceStore(str(tmp_path / "tracked.db"))
+    store.list()
+
+    assert opened
+    assert {id(connection) for connection in opened} == closed

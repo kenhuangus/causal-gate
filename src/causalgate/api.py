@@ -47,14 +47,24 @@ PUBLIC_DEMO_MAX_RECORDS = 64
 PUBLIC_DEMO_TTL_SECONDS = 60 * 60
 
 
-def _apply_security_headers(response):
+def _apply_security_headers(response, *, allow_docs_assets: bool = False):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'"
-    )
+    if allow_docs_assets:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "font-src 'self' data: https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https://fastapi.tiangolo.com; "
+            "connect-src 'self'"
+        )
+    else:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'"
+        )
     return response
 
 
@@ -146,7 +156,7 @@ def create_app(
                 return _apply_security_headers(PlainTextResponse("demo rate limit exceeded", status_code=429))
             bucket.append(now)
         response = await call_next(request)
-        return _apply_security_headers(response)
+        return _apply_security_headers(response, allow_docs_assets=request.url.path == "/api/docs")
 
     @app.get("/health")
     def health():
@@ -301,7 +311,10 @@ def create_app(
     @app.get("/api/v1/recorded-analysis", response_model=AnalysisArtifact)
     def recorded_analysis():
         """Expose the fixture-bound, non-live artifact bundled with the judge image."""
-        artifact = Path(__file__).parents[2] / "artifacts" / "recorded-analysis.json"
+        artifact = Path(os.getenv(
+            "CAUSALGATE_RECORDED_ANALYSIS",
+            str(Path(__file__).parents[2] / "artifacts" / "recorded-analysis.json"),
+        ))
         if not artifact.exists():
             raise HTTPException(404, "recorded analysis artifact is unavailable")
         try:
@@ -324,11 +337,11 @@ def create_app(
     def benchmark():
         return run_benchmark().as_dict()
 
-    @app.get("/api/v1/assurance-suite", response_model=SuitePromotionGate)
+    @app.get("/api/v1/assurance-suite", response_model=SuitePromotionGate | None)
     def assurance_suite():
         key = os.getenv("CAUSALGATE_ATTESTATION_KEY", "")
         if len(key.encode()) < 32:
-            raise HTTPException(503, "authenticated suite attestation is not configured")
+            return None
         return run_synthetic_assurance_suite(key)
 
     web = Path(os.getenv("CAUSALGATE_WEB_DIR", "apps/web/dist")).resolve()
