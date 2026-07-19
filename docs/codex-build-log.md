@@ -1,5 +1,13 @@
 # Codex build log
 
+## 2026-07-19 — submission hardening and public judge release
+
+Request: review the PRD, architecture, implementation, and UI as one system; fix reproducible defects; create a complete demo; and prepare the project for OpenAI Build Week submission.
+
+Changes: fixed protected authorization evidence corruption, made optional live-assurance service failures explicit without breaking the deterministic browser path, closed SQLite connection leaks, added regression coverage, clarified the SDK and SaaS product boundary, and excluded local media and unrelated working artifacts from Docker and Cloud Build contexts. Deployed source revision `1612153` to a public, scale-to-zero Cloud Run judge profile with no stored OpenAI key. Created and published a 2:56 YouTube demo with Deepgram narration at 1.5x native speed, burned captions, and a successful copyright check. Created the Devpost project and populated its description, technology list, repository, judge URL, video, and thumbnail.
+
+Verification: 80 Python tests passed with 90 percent coverage; 9 UI tests passed; the TypeScript/Vite production build passed; GitHub CI, GitGuardian, and CodeRabbit status checks passed; the Cloud Build image succeeded from a 300 KiB source archive; `/health` returned deterministic mode and `byok_required`; the public video was verified at 2:56; and the no-signup Cloud Run URL served the judge application. The primary Codex session is `019f7680-b519-72b0-bf36-27bc64308324`.
+
 > Naming note: entries below the CausalGate migration entry are historical and may use the former product name, `AgentFlight Recorder`, and its former `agentflight`/`AFR` identifiers. They are preserved as an accurate record of what was built and verified at the time.
 
 ## 2026-07-18 — CausalGate product migration

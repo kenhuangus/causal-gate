@@ -8,6 +8,8 @@ It combines an evidence-linked Intent Causal Record, deterministic intent-based 
 
 > Track: **Developer Tools** · Built for **OpenAI Build Week** · Python 3.11+ · React · FastAPI · OpenAI Responses API
 
+**Judge links:** [Run the no-signup demo](https://causal-gate-sinijbqona-uc.a.run.app) · [Watch the 2:56 public demo video](https://youtu.be/4yxrNTvc_t0) · [View the Devpost project](https://devpost.com/software/causalgate)
+
 ## Why judges should care
 
 | Judging criterion | Evidence in the project |
@@ -20,6 +22,8 @@ It combines an evidence-linked Intent Causal Record, deterministic intent-based 
 ## Judge quick path
 
 The complete deterministic demonstration runs without an account, external service, real secret, or OpenAI API key.
+
+The hosted judge instance is available at [causal-gate-sinijbqona-uc.a.run.app](https://causal-gate-sinijbqona-uc.a.run.app). It runs the same synthetic, deterministic workflow as the local launch and scales to zero when idle.
 
 ### One-command local launch
 
