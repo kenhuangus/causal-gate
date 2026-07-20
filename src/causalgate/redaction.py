@@ -11,6 +11,12 @@ PATTERNS = [
 PROTECTED_STRUCTURAL_KEYS = {
     "tool", "blocked", "outbound", "protected_read", "decision", "outcome",
     "rule", "field", "prevented_by_event_id", "intent_clause_ids", "evidence_event_ids",
+    "enforcement", "reason", "reason_code", "authorization_decision_id",
+    "intent_grant_id", "grant_digest", "ontology_version", "ontology_digest",
+    "policy_version", "matched_policy_ids", "obligations", "permit_issued",
+}
+PROTECTED_REQUEST_STRUCTURAL_KEYS = {
+    "tool", "action", "resource_type", "data_class", "destination", "effects",
 }
 
 
@@ -35,8 +41,15 @@ def redacted_event_payload(payload: dict[str, Any], sensitivity: list[str]) -> d
     """Build the only payload representation safe to return through the API."""
     value = redact(payload)
     if "protected" in sensitivity:
-        return {
-            key: item if key in PROTECTED_STRUCTURAL_KEYS else "[PROTECTED]"
-            for key, item in value.items()
-        }
+        protected = {}
+        for key, item in value.items():
+            if key == "request" and isinstance(item, dict):
+                protected[key] = {
+                    request_key: request_item
+                    for request_key, request_item in item.items()
+                    if request_key in PROTECTED_REQUEST_STRUCTURAL_KEYS
+                }
+            else:
+                protected[key] = item if key in PROTECTED_STRUCTURAL_KEYS else "[PROTECTED]"
+        return protected
     return value

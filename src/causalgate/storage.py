@@ -5,6 +5,7 @@ import hashlib
 import threading
 import time
 from collections import OrderedDict
+from contextlib import contextmanager
 from pathlib import Path
 
 from .models import Event, EventType, Execution
@@ -46,8 +47,14 @@ class TraceStore:
             conn.execute("CREATE TABLE IF NOT EXISTS idempotency (execution_id TEXT NOT NULL, key TEXT NOT NULL, body_hash TEXT NOT NULL, event_id TEXT NOT NULL, PRIMARY KEY(execution_id, key))")
             conn.execute("CREATE TABLE IF NOT EXISTS public_demo_executions (id TEXT PRIMARY KEY, created_at REAL NOT NULL)")
 
+    @contextmanager
     def _connect(self):
-        return sqlite3.connect(self.path)
+        connection = sqlite3.connect(self.path)
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def put(self, run: Execution) -> Execution:
         safe = _safe_execution(run)
